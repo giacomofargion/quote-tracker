@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   ArrowLeft,
   Play,
@@ -21,7 +22,8 @@ import {
   Trash2,
   Clock,
   Settings,
-  X
+  X,
+  CheckCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ManualSessionDialog } from '@/components/manual-session-dialog'
@@ -59,6 +61,7 @@ export function ProjectDetail({ id }: { id: string }) {
   const [editQuote, setEditQuote] = useState('')
   const [editRate, setEditRate] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [editStatus, setEditStatus] = useState<'active' | 'completed'>('active')
 
   const project = projects.find((p) => p.id === id)
   const isTimerActive = activeProjectId === id
@@ -83,6 +86,7 @@ export function ProjectDetail({ id }: { id: string }) {
       setEditClient(project.client)
       setEditQuote(project.quoteAmount.toString())
       setEditRate(project.desiredHourlyRate.toString())
+      setEditStatus(project.status)
     }
   }, [project])
 
@@ -190,10 +194,30 @@ export function ProjectDetail({ id }: { id: string }) {
         client: editClient,
         quoteAmount: parseFloat(editQuote),
         desiredHourlyRate: parseFloat(editRate),
+        status: editStatus,
       })
       setIsEditOpen(false)
     } catch (error) {
       console.error('Failed to update project:', error)
+    }
+  }
+
+  const handleMarkAsComplete = async () => {
+    try {
+      await updateProject(project.id, {
+        status: 'completed',
+      })
+      toast({
+        title: 'Project completed',
+        description: `${project.name} has been marked as complete.`,
+      })
+    } catch (error) {
+      console.error('Failed to mark project as complete:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Failed to mark as complete',
+        description: 'An error occurred while updating the project status. Please try again.',
+      })
     }
   }
 
@@ -230,7 +254,15 @@ export function ProjectDetail({ id }: { id: string }) {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{project.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{project.name}</h1>
+              {project.status === 'completed' && (
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 shrink-0">
+                  <CheckCircle className="mr-1 h-3 w-3" />
+                  Completed
+                </Badge>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
               <Badge variant="secondary" className="shrink-0">${project.quoteAmount.toFixed(2)} Fixed</Badge>
               <span className="text-sm text-muted-foreground">
@@ -244,6 +276,12 @@ export function ProjectDetail({ id }: { id: string }) {
             <Settings className="mr-2 h-4 w-4" />
             Edit
           </Button>
+          {project.status === 'active' && (
+            <Button variant="outline" size="sm" onClick={handleMarkAsComplete}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Mark as complete
+            </Button>
+          )}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8">
@@ -350,44 +388,51 @@ export function ProjectDetail({ id }: { id: string }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.6 }}
               >
-                <motion.button
-                  onClick={handleTimerToggle}
-                  className={cn(
-                    "w-full inline-flex items-center justify-center gap-2 px-6 py-3",
-                    "text-sm font-medium rounded-lg",
-                    "bg-primary text-primary-foreground",
-                    "hover:bg-primary/90",
-                    "transition-colors"
-                  )}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <AnimatePresence mode="wait">
-                    {isTimerActive ? (
-                      <motion.span
-                        key="stop"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="flex items-center"
-                      >
-                        <Square className="mr-2 h-5 w-5" />
-                        Stop
-                      </motion.span>
-                    ) : (
-                      <motion.span
-                        key="start"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        className="flex items-center"
-                      >
-                        <Play className="mr-2 h-5 w-5" />
-                        Start
-                      </motion.span>
+                {project.status === 'completed' ? (
+                  <div className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium rounded-lg bg-muted text-muted-foreground cursor-not-allowed">
+                    <CheckCircle className="mr-2 h-5 w-5" />
+                    Project Completed
+                  </div>
+                ) : (
+                  <motion.button
+                    onClick={handleTimerToggle}
+                    className={cn(
+                      "w-full inline-flex items-center justify-center gap-2 px-6 py-3",
+                      "text-sm font-medium rounded-lg",
+                      "bg-primary text-primary-foreground",
+                      "hover:bg-primary/90",
+                      "transition-colors"
                     )}
-                  </AnimatePresence>
-                </motion.button>
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <AnimatePresence mode="wait">
+                      {isTimerActive ? (
+                        <motion.span
+                          key="stop"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="flex items-center"
+                        >
+                          <Square className="mr-2 h-5 w-5" />
+                          Stop
+                        </motion.span>
+                      ) : (
+                        <motion.span
+                          key="start"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="flex items-center"
+                        >
+                          <Play className="mr-2 h-5 w-5" />
+                          Start
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                )}
               </motion.div>
             </div>
           </CardContent>
@@ -636,6 +681,19 @@ export function ProjectDetail({ id }: { id: string }) {
             <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
               <span className="text-muted-foreground text-sm">Budgeted Time:</span>
               <span className="font-mono font-semibold">{budgetedTime} hours</span>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">Project Status</Label>
+              <Select value={editStatus} onValueChange={(v) => setEditStatus(v as 'active' | 'completed')}>
+                <SelectTrigger id="edit-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

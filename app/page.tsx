@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CardSpotlight } from '@/components/aceternity/card-spotlight'
@@ -193,6 +193,7 @@ export default function Home() {
               const isAboveTarget = effectiveRate >= project.desiredHourlyRate
               const hours = Math.floor(project.totalTrackedTime / 3600)
               const minutes = Math.floor((project.totalTrackedTime % 3600) / 60)
+              const isCompleted = project.status === 'completed'
 
               return (
                 <motion.div
@@ -204,14 +205,25 @@ export default function Home() {
                   <Link href={`/project/${project.id}`}>
                     <CardSpotlight
                       radius={400}
-                      color="rgba(120, 119, 198, 0.3)"
-                      className="h-full border border-dashed border-border bg-card hover:border-primary/50 transition-colors cursor-pointer p-4 sm:p-5"
+                      color={isCompleted ? "rgba(16, 185, 129, 0.2)" : "rgba(120, 119, 198, 0.3)"}
+                      className={cn(
+                        "h-full border border-dashed border-border bg-card hover:border-primary/50 transition-colors cursor-pointer p-4 sm:p-5",
+                        isCompleted && "border-emerald-500/30 bg-emerald-500/5"
+                      )}
                     >
                       <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3">
                         <h3 className="font-semibold text-base sm:text-lg truncate">{project.name}</h3>
-                        <Badge variant="secondary" className="shrink-0 text-xs">
-                          ${project.quoteAmount.toFixed(2)}
-                        </Badge>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isCompleted && (
+                            <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+                              <CheckCircle className="mr-1 h-3 w-3" />
+                              Complete
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="text-xs">
+                            ${project.quoteAmount.toFixed(2)}
+                          </Badge>
+                        </div>
                       </div>
                       <p className="text-sm text-muted-foreground mb-3 sm:mb-4 truncate">
                         {project.client || 'No client'}
