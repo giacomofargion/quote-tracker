@@ -4,18 +4,21 @@ import React from "react"
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { StatefulButton } from '@/components/aceternity/stateful-button'
+import { PageTransition } from '@/components/page-transition'
 
 export default function NewProjectPage() {
   const router = useRouter()
   const { settings, fetchSettings, addProject, isLoading } = useStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   const [name, setName] = useState('')
   const [client, setClient] = useState('')
   const [quoteAmount, setQuoteAmount] = useState('')
@@ -34,11 +37,11 @@ export default function NewProjectPage() {
     ? (parseFloat(quoteAmount) / parseFloat(desiredHourlyRate)).toFixed(1)
     : '0'
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+
     if (!name || !quoteAmount || !desiredHourlyRate) return
-    
+
     setIsSubmitting(true)
     try {
       await addProject({
@@ -56,13 +59,19 @@ export default function NewProjectPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Card className="border-dashed">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="text-xl sm:text-2xl">New Fixed-Price Project</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+    <PageTransition>
+      <div className="max-w-2xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className="border-dashed">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-xl sm:text-2xl">New Fixed-Price Project</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name">Project Name</Label>
               <Input
@@ -129,22 +138,32 @@ export default function NewProjectPage() {
               />
             </div>
 
-            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => router.push('/')}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" className="flex-1" disabled={isSubmitting || isLoading}>
-                {isSubmitting ? 'Creating...' : 'Create Project'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+                <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => router.push('/')}
+                    className="w-full sm:w-auto"
+                  >
+                    Cancel
+                  </Button>
+                  <StatefulButton
+                    type="submit"
+                    className="flex-1"
+                    disabled={isLoading}
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      await handleSubmit()
+                    }}
+                  >
+                    Create Project
+                  </StatefulButton>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </PageTransition>
   )
 }
