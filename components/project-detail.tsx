@@ -5,6 +5,7 @@ import React from "react"
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, calculateEffectiveRate, getRateStatus } from '@/lib/store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,10 +13,10 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { 
-  ArrowLeft, 
-  Play, 
-  Square, 
+import {
+  ArrowLeft,
+  Play,
+  Square,
   Plus,
   Trash2,
   Clock,
@@ -41,6 +42,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { PageTransition } from '@/components/page-transition'
+import { Skeleton } from '@/components/ui/skeleton'
+import { toast } from '@/hooks/use-toast'
 
 export function ProjectDetail({ id }: { id: string }) {
   const router = useRouter()
@@ -48,14 +52,14 @@ export function ProjectDetail({ id }: { id: string }) {
   const [elapsedTime, setElapsedTime] = useState(0)
   const [isManualSessionOpen, setIsManualSessionOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
-  
+
   // Edit form state
   const [editName, setEditName] = useState('')
   const [editClient, setEditClient] = useState('')
   const [editQuote, setEditQuote] = useState('')
   const [editRate, setEditRate] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  
+
   const project = projects.find((p) => p.id === id)
   const isTimerActive = activeProjectId === id
 
@@ -87,26 +91,48 @@ export function ProjectDetail({ id }: { id: string }) {
       setElapsedTime(0)
       return
     }
-    
+
     const interval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - new Date(timerStartTime).getTime()) / 1000)
       setElapsedTime(elapsed)
     }, 1000)
-    
+
     return () => clearInterval(interval)
   }, [isTimerActive, timerStartTime])
 
   if (isLoading && !project) {
     return (
-      <div className="space-y-6">
-        <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading project...</p>
+      <PageTransition>
+        <div className="space-y-6">
+          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Link>
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr,320px] xl:grid-cols-[1fr,340px]">
+            <Card className="border-dashed">
+              <CardContent className="p-4 sm:p-6 lg:p-8">
+                <div className="flex flex-col items-center justify-center py-4 sm:py-8">
+                  <Skeleton className="h-40 w-40 sm:h-56 sm:w-56 rounded-full mb-4" />
+                  <Skeleton className="h-10 w-48 mb-2" />
+                  <Skeleton className="h-6 w-32" />
+                </div>
+              </CardContent>
+            </Card>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <Card key={i} className="border-dashed">
+                    <CardContent className="p-3 sm:p-4">
+                      <Skeleton className="h-4 w-20 mb-2" />
+                      <Skeleton className="h-8 w-16" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </PageTransition>
     )
   }
 
@@ -125,12 +151,12 @@ export function ProjectDetail({ id }: { id: string }) {
   }
 
   const effectiveRate = calculateEffectiveRate(project)
-  const rateStatus = getRateStatus(project)
+  // const rateStatus = getRateStatus(project)
   const hoursWorked = project.totalTrackedTime / 3600
   const hoursRemaining = Math.max(project.targetHours - hoursWorked, 0)
   const isOverBudget = hoursWorked > project.targetHours
   const rateDifference = project.desiredHourlyRate - effectiveRate
-  const earningsPerMinute = project.totalTrackedTime > 0 
+  const earningsPerMinute = project.totalTrackedTime > 0
     ? project.quoteAmount / (project.totalTrackedTime / 60)
     : 0
 
@@ -190,9 +216,15 @@ export function ProjectDetail({ id }: { id: string }) {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <PageTransition>
+      <div className="space-y-4 sm:space-y-6">
+        {/* Header */}
+        <motion.div
+          className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
         <div className="flex items-start gap-3 sm:gap-4">
           <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors mt-1">
             <ArrowLeft className="h-5 w-5" />
@@ -232,16 +264,26 @@ export function ProjectDetail({ id }: { id: string }) {
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </div>
+        </motion.div>
 
       {/* Main Content */}
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr,320px] xl:grid-cols-[1fr,340px]">
         {/* Left Column - Timer and Gauge */}
-        <Card className="border-dashed">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          <Card className="border-dashed">
           <CardContent className="p-4 sm:p-6 lg:p-8">
             {/* Circular Gauge */}
             <div className="flex flex-col items-center justify-center py-4 sm:py-8">
-              <div className="relative w-40 h-40 sm:w-56 sm:h-56">
+              <motion.div
+                className="relative w-40 h-40 sm:w-56 sm:h-56"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                   {/* Background circle */}
                   <circle
@@ -254,7 +296,7 @@ export function ProjectDetail({ id }: { id: string }) {
                     className="text-muted/20"
                   />
                   {/* Progress circle */}
-                  <circle
+                  <motion.circle
                     cx="50"
                     cy="50"
                     r="42"
@@ -262,23 +304,35 @@ export function ProjectDetail({ id }: { id: string }) {
                     strokeWidth="8"
                     strokeLinecap="round"
                     className={gaugeColor}
-                    strokeDasharray={`${gaugePercentage * 2.64} 264`}
+                    initial={{ strokeDasharray: "0 264" }}
+                    animate={{ strokeDasharray: `${gaugePercentage * 2.64} 264` }}
+                    transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={cn(
-                    "text-2xl sm:text-4xl font-bold",
-                    isAboveTarget ? "text-emerald-500" : "text-red-500"
-                  )}>
+                  <motion.span
+                    className={cn(
+                      "text-2xl sm:text-4xl font-bold",
+                      isAboveTarget ? "text-emerald-500" : "text-red-500"
+                    )}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                  >
                     ${effectiveRate.toFixed(2)}
-                  </span>
+                  </motion.span>
                   <span className="text-xs text-muted-foreground uppercase tracking-wider">
                     Effective / HR
                   </span>
                 </div>
-              </div>
-              
-              <div className="text-center mt-4">
+              </motion.div>
+
+              <motion.div
+                className="text-center mt-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.5 }}
+              >
                 <p className="text-sm text-muted-foreground">
                   Target: ${project.desiredHourlyRate.toFixed(2)}/hr
                 </p>
@@ -287,37 +341,75 @@ export function ProjectDetail({ id }: { id: string }) {
                     {rateDifference.toFixed(0)} below target
                   </p>
                 )}
-              </div>
+              </motion.div>
 
               {/* Timer Button */}
-              <Button
-                variant="default"
-                size="lg"
+              <motion.div
                 className="w-full max-w-xs mt-6 sm:mt-8"
-                onClick={handleTimerToggle}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.6 }}
               >
-                {isTimerActive ? (
-                  <>
-                    <Square className="mr-2 h-5 w-5" />
-                    Stop
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-5 w-5" />
-                    Start
-                  </>
-                )}
-              </Button>
+                <motion.button
+                  onClick={handleTimerToggle}
+                  className={cn(
+                    "w-full inline-flex items-center justify-center gap-2 px-6 py-3",
+                    "text-sm font-medium rounded-lg",
+                    "bg-primary text-primary-foreground",
+                    "hover:bg-primary/90",
+                    "transition-colors"
+                  )}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <AnimatePresence mode="wait">
+                    {isTimerActive ? (
+                      <motion.span
+                        key="stop"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="flex items-center"
+                      >
+                        <Square className="mr-2 h-5 w-5" />
+                        Stop
+                      </motion.span>
+                    ) : (
+                      <motion.span
+                        key="start"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="flex items-center"
+                      >
+                        <Play className="mr-2 h-5 w-5" />
+                        Start
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+              </motion.div>
             </div>
           </CardContent>
         </Card>
+        </motion.div>
 
         {/* Right Column - Stats and Sessions */}
-        <div className="space-y-4">
+        <motion.div
+          className="space-y-4"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
           {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             {/* Time Tracked */}
-            <Card className="border-dashed">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              <Card className="border-dashed">
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs sm:text-sm text-muted-foreground">Time Tracked</span>
@@ -329,9 +421,15 @@ export function ProjectDetail({ id }: { id: string }) {
                 <p className="text-xs text-muted-foreground">Total</p>
               </CardContent>
             </Card>
+            </motion.div>
 
             {/* Target Hours */}
-            <Card className="border-dashed">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.35 }}
+            >
+              <Card className="border-dashed">
               <CardContent className="p-3 sm:p-4">
                 <span className="text-xs sm:text-sm text-muted-foreground">Target Hours</span>
                 <p className="text-lg sm:text-2xl font-bold font-mono mt-1">
@@ -342,9 +440,15 @@ export function ProjectDetail({ id }: { id: string }) {
                 </p>
               </CardContent>
             </Card>
+            </motion.div>
 
             {/* Remaining */}
-            <Card className={cn(
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.4 }}
+            >
+              <Card className={cn(
               "border-dashed",
               isOverBudget && "border-red-500/50"
             )}>
@@ -361,9 +465,15 @@ export function ProjectDetail({ id }: { id: string }) {
                 </p>
               </CardContent>
             </Card>
+            </motion.div>
 
             {/* Earnings/Min */}
-            <Card className="border-dashed">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.45 }}
+            >
+              <Card className="border-dashed">
               <CardContent className="p-3 sm:p-4">
                 <span className="text-xs sm:text-sm text-muted-foreground">Earnings/Min</span>
                 <p className="text-lg sm:text-2xl font-bold font-mono mt-1">
@@ -372,6 +482,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 <p className="text-xs text-muted-foreground">Current pace</p>
               </CardContent>
             </Card>
+            </motion.div>
           </div>
 
           {/* Recent Sessions */}
@@ -402,11 +513,16 @@ export function ProjectDetail({ id }: { id: string }) {
                     <span>Duration</span>
                   </div>
                   <div className="max-h-[200px] sm:max-h-[300px] overflow-y-auto space-y-1">
-                    {sortedSessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="flex items-center justify-between py-2 group"
-                      >
+                    <AnimatePresence>
+                      {sortedSessions.map((session, index) => (
+                        <motion.div
+                          key={session.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.2, delay: index * 0.05 }}
+                          className="flex items-center justify-between py-2 group"
+                        >
                         <div className="min-w-0">
                           <p className="text-xs sm:text-sm">
                             {new Date(session.startTime).toLocaleDateString('en-US', {
@@ -416,8 +532,8 @@ export function ProjectDetail({ id }: { id: string }) {
                             })}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(session.startTime).toLocaleTimeString([], { 
-                              hour: 'numeric', 
+                            {new Date(session.startTime).toLocaleTimeString([], {
+                              hour: 'numeric',
                               minute: '2-digit',
                               hour12: true
                             })}
@@ -433,6 +549,11 @@ export function ProjectDetail({ id }: { id: string }) {
                                 await deleteSession(project.id, session.id)
                               } catch (error) {
                                 console.error('Failed to delete session:', error)
+                                toast({
+                                  variant: 'destructive',
+                                  title: 'Failed to delete session',
+                                  description: 'An error occurred while deleting the session. Please try again.',
+                                })
                               }
                             }}
                             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded"
@@ -440,19 +561,20 @@ export function ProjectDetail({ id }: { id: string }) {
                             <X className="h-3 w-3 text-muted-foreground" />
                           </button>
                         </div>
-                      </div>
-                    ))}
+                      </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
 
       {/* Manual Session Dialog */}
-      <ManualSessionDialog 
-        open={isManualSessionOpen} 
+      <ManualSessionDialog
+        open={isManualSessionOpen}
         onOpenChange={setIsManualSessionOpen}
         projectId={project.id}
       />
@@ -543,6 +665,7 @@ export function ProjectDetail({ id }: { id: string }) {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </PageTransition>
   )
 }
