@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dialog"
 import { PageTransition } from '@/components/page-transition'
 import { Skeleton } from '@/components/ui/skeleton'
+import { toast } from '@/hooks/use-toast'
 
 export function ProjectDetail({ id }: { id: string }) {
   const router = useRouter()
@@ -150,7 +151,7 @@ export function ProjectDetail({ id }: { id: string }) {
   }
 
   const effectiveRate = calculateEffectiveRate(project)
-  const rateStatus = getRateStatus(project)
+  // const rateStatus = getRateStatus(project)
   const hoursWorked = project.totalTrackedTime / 3600
   const hoursRemaining = Math.max(project.targetHours - hoursWorked, 0)
   const isOverBudget = hoursWorked > project.targetHours
@@ -218,7 +219,7 @@ export function ProjectDetail({ id }: { id: string }) {
     <PageTransition>
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <motion.div 
+        <motion.div
           className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -277,7 +278,7 @@ export function ProjectDetail({ id }: { id: string }) {
           <CardContent className="p-4 sm:p-6 lg:p-8">
             {/* Circular Gauge */}
             <div className="flex flex-col items-center justify-center py-4 sm:py-8">
-              <motion.div 
+              <motion.div
                 className="relative w-40 h-40 sm:w-56 sm:h-56"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -309,7 +310,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <motion.span 
+                  <motion.span
                     className={cn(
                       "text-2xl sm:text-4xl font-bold",
                       isAboveTarget ? "text-emerald-500" : "text-red-500"
@@ -325,8 +326,8 @@ export function ProjectDetail({ id }: { id: string }) {
                   </span>
                 </div>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 className="text-center mt-4"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -394,7 +395,7 @@ export function ProjectDetail({ id }: { id: string }) {
         </motion.div>
 
         {/* Right Column - Stats and Sessions */}
-        <motion.div 
+        <motion.div
           className="space-y-4"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -548,6 +549,11 @@ export function ProjectDetail({ id }: { id: string }) {
                                 await deleteSession(project.id, session.id)
                               } catch (error) {
                                 console.error('Failed to delete session:', error)
+                                toast({
+                                  variant: 'destructive',
+                                  title: 'Failed to delete session',
+                                  description: 'An error occurred while deleting the session. Please try again.',
+                                })
                               }
                             }}
                             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded"

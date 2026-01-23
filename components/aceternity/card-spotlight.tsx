@@ -51,8 +51,8 @@ export const CardSpotlight = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(
-        "group relative rounded-xl",
-        asCard && "border border-neutral-800 bg-neutral-950 p-6 overflow-hidden",
+        "group relative rounded-xl overflow-hidden",
+        asCard && "border border-neutral-800 bg-neutral-950 p-6",
         className
       )}
     >

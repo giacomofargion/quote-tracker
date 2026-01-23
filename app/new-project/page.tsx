@@ -150,11 +150,7 @@ export default function NewProjectPage() {
                   <StatefulButton
                     type="submit"
                     className="flex-1"
-                    disabled={isLoading}
-                    onClick={async (e) => {
-                      e.preventDefault()
-                      await handleSubmit()
-                    }}
+                    disabled={isLoading || isSubmitting}
                   >
                     Create Project
                   </StatefulButton>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,8 @@ interface StatefulButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEleme
   children: React.ReactNode;
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void | Promise<void>;
   className?: string;
+  /** Optional error handler called when onClick throws an error */
+  onError?: (error: unknown) => void;
 }
 
 export const StatefulButton = ({
@@ -16,9 +18,21 @@ export const StatefulButton = ({
   onClick,
   className,
   disabled,
+  onError,
   ...props
 }: StatefulButtonProps) => {
   const [state, setState] = useState<"idle" | "loading" | "success">("idle");
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clear timeout on unmount to prevent setState on unmounted component
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (disabled || state !== "idle") return;
@@ -30,12 +44,17 @@ export const StatefulButton = ({
       setState("success");
       
       // Reset to idle after showing success state
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setState("idle");
+        timeoutRef.current = null;
       }, 2000);
     } catch (error) {
       setState("idle");
-      throw error;
+      // Surface error via callback or console, but don't rethrow to avoid unhandled rejections
+      onError?.(error);
+      if (!onError) {
+        console.error("StatefulButton onClick error:", error);
+      }
     }
   };
 
