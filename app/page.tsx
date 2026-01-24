@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Search, CheckCircle } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CardSpotlight } from '@/components/aceternity/card-spotlight'
+import { AuroraBackground } from '@/components/ui/aurora-background'
 import { PageTransition } from '@/components/page-transition'
 
 export default function Home() {
@@ -28,6 +29,8 @@ export default function Home() {
     sortField,
     setSortField,
     sortDirection,
+    settings,
+    fetchSettings,
   } = useStore()
 
   useEffect(() => {
@@ -35,6 +38,13 @@ export default function Home() {
       fetchProjects()
     }
   }, [isInitialized, fetchProjects])
+
+  useEffect(() => {
+    if (!settings) {
+      fetchSettings()
+    }
+  }, [settings, fetchSettings])
+  const currencyCode = settings?.currencyCode ?? 'gbp'
 
   const filteredAndSortedProjects = useMemo(() => {
     let result = [...projects]
@@ -92,26 +102,31 @@ export default function Home() {
   }
 
   return (
-    <PageTransition>
-      <div className="space-y-4 sm:space-y-6">
-        {/* Header */}
-        <motion.div 
-          className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Overview of your freelance performance.</p>
-          </div>
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/new-project">
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Link>
-          </Button>
-        </motion.div>
+    <AuroraBackground className="items-start justify-start">
+      <PageTransition>
+        <div className="relative z-10 w-full space-y-4 px-4 pb-8 pt-6 sm:space-y-6 sm:px-6 lg:px-8">
+          {/* Header */}
+          <motion.div
+            className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">Overview of your freelance performance.</p>
+            </div>
+            <Button
+              asChild
+              variant="outline"
+              className="w-full sm:w-auto border-black text-black hover:bg-black/5 dark:border-white dark:text-white dark:hover:bg-white/10"
+            >
+              <Link href="/new-project">
+                <Plus className="mr-2 h-4 w-4" />
+                New Project
+              </Link>
+            </Button>
+          </motion.div>
 
       {/* Search and Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -221,7 +236,7 @@ export default function Home() {
                             </Badge>
                           )}
                           <Badge variant="secondary" className="text-xs">
-                            ${project.quoteAmount.toFixed(2)}
+                            {formatCurrency(project.quoteAmount, currencyCode)}
                           </Badge>
                         </div>
                       </div>
@@ -235,7 +250,7 @@ export default function Home() {
                             'font-mono font-semibold text-sm sm:text-base',
                             isAboveTarget ? 'text-emerald-500' : 'text-red-500'
                           )}>
-                            ${effectiveRate.toFixed(2)}/hr
+                            {formatCurrency(effectiveRate, currencyCode)}/hr
                           </p>
                         </div>
                         <div className="text-right">
@@ -253,7 +268,8 @@ export default function Home() {
           </div>
         )}
       </div>
-      </div>
-    </PageTransition>
+        </div>
+      </PageTransition>
+    </AuroraBackground>
   )
 }

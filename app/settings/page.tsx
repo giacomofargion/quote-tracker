@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useStore } from '@/lib/store'
+import { currencyOptions } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +23,7 @@ import {
 export default function SettingsPage() {
   const { settings, fetchSettings, updateSettings, projects, fetchProjects, isLoading } = useStore()
   const [desiredHourlyRate, setDesiredHourlyRate] = useState('')
+  const [currencyCode, setCurrencyCode] = useState<'gbp' | 'usd' | 'eur'>('gbp')
   const [saved, setSaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -30,6 +32,7 @@ export default function SettingsPage() {
       fetchSettings()
     } else {
       setDesiredHourlyRate(settings.desiredHourlyRate.toString())
+      setCurrencyCode(settings.currencyCode)
     }
   }, [settings, fetchSettings])
 
@@ -45,6 +48,7 @@ export default function SettingsPage() {
     try {
       await updateSettings({
         desiredHourlyRate: parseFloat(desiredHourlyRate),
+        currencyCode,
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
@@ -127,17 +131,18 @@ export default function SettingsPage() {
 
           <div className="space-y-2">
             <Label>Currency Display</Label>
-            <Select defaultValue="usd" disabled>
+            <Select value={currencyCode} onValueChange={(value) => setCurrencyCode(value as typeof currencyCode)}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="usd">USD ($)</SelectItem>
-                <SelectItem value="eur">EUR (€)</SelectItem>
-                <SelectItem value="gbp">GBP (£)</SelectItem>
+                {currencyOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground">Currency switching is coming soon.</p>
           </div>
 
           <Button onClick={handleSaveChanges} className="w-full sm:w-auto" disabled={isSaving || isLoading || !settings}>

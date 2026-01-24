@@ -25,7 +25,7 @@ import {
   X,
   CheckCircle
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, currencyOptions, formatCurrency } from '@/lib/utils'
 import { ManualSessionDialog } from '@/components/manual-session-dialog'
 import {
   AlertDialog,
@@ -64,6 +64,8 @@ export function ProjectDetail({ id }: { id: string }) {
   const [editStatus, setEditStatus] = useState<'active' | 'completed'>('active')
 
   const project = projects.find((p) => p.id === id)
+  const currencyCode = settings?.currencyCode ?? 'gbp'
+  const currencyLabel = currencyOptions.find((option) => option.value === currencyCode)?.label ?? 'GBP (£)'
   const isTimerActive = activeProjectId === id
 
   // Fetch project data if not loaded
@@ -264,9 +266,9 @@ export function ProjectDetail({ id }: { id: string }) {
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
-              <Badge variant="secondary" className="shrink-0">${project.quoteAmount.toFixed(2)} Fixed</Badge>
+              <Badge variant="secondary" className="shrink-0">{formatCurrency(project.quoteAmount, currencyCode)} Fixed</Badge>
               <span className="text-sm text-muted-foreground">
-                Target: ${project.desiredHourlyRate.toFixed(2)}/hr
+                Target: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
               </span>
             </div>
           </div>
@@ -357,7 +359,7 @@ export function ProjectDetail({ id }: { id: string }) {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
                   >
-                    ${effectiveRate.toFixed(2)}
+                    {formatCurrency(effectiveRate, currencyCode)}
                   </motion.span>
                   <span className="text-xs text-muted-foreground uppercase tracking-wider">
                     Effective / HR
@@ -372,7 +374,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 transition={{ duration: 0.3, delay: 0.5 }}
               >
                 <p className="text-sm text-muted-foreground">
-                  Target: ${project.desiredHourlyRate.toFixed(2)}/hr
+                  Target: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
                 </p>
                 {!isAboveTarget && project.totalTrackedTime > 0 && (
                   <p className="text-red-500 text-sm mt-1">
@@ -481,7 +483,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   {project.targetHours.toFixed(1)}h
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  Based on ${project.desiredHourlyRate.toFixed(2)}/hr
+                  Based on {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
                 </p>
               </CardContent>
             </Card>
@@ -522,7 +524,7 @@ export function ProjectDetail({ id }: { id: string }) {
               <CardContent className="p-3 sm:p-4">
                 <span className="text-xs sm:text-sm text-muted-foreground">Earnings/Min</span>
                 <p className="text-lg sm:text-2xl font-bold font-mono mt-1">
-                  ${earningsPerMinute.toFixed(2)}
+                  {formatCurrency(earningsPerMinute, currencyCode)}
                 </p>
                 <p className="text-xs text-muted-foreground">Current pace</p>
               </CardContent>
@@ -653,7 +655,7 @@ export function ProjectDetail({ id }: { id: string }) {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-quote">Quote Amount (USD)</Label>
+                <Label htmlFor="edit-quote">Quote Amount ({currencyLabel})</Label>
                 <Input
                   id="edit-quote"
                   type="number"
@@ -665,7 +667,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-rate">Target Rate (USD/hr)</Label>
+                <Label htmlFor="edit-rate">Target Rate ({currencyLabel}/hr)</Label>
                 <Input
                   id="edit-rate"
                   type="number"

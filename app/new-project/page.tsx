@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useStore } from '@/lib/store'
+import { currencyOptions } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +33,9 @@ export default function NewProjectPage() {
       setDesiredHourlyRate(settings.desiredHourlyRate.toString())
     }
   }, [settings, fetchSettings])
+
+  const currencyCode = settings?.currencyCode ?? 'gbp'
+  const currencyLabel = currencyOptions.find((option) => option.value === currencyCode)?.label ?? 'GBP (£)'
 
   const budgetedTime = quoteAmount && desiredHourlyRate
     ? (parseFloat(quoteAmount) / parseFloat(desiredHourlyRate)).toFixed(1)
@@ -95,7 +99,7 @@ export default function NewProjectPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="quote">Quote Amount (USD)</Label>
+                <Label htmlFor="quote">Quote Amount ({currencyLabel})</Label>
                 <Input
                   id="quote"
                   type="number"
@@ -108,7 +112,7 @@ export default function NewProjectPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rate">Target Rate (USD/hr)</Label>
+                <Label htmlFor="rate">Target Rate ({currencyLabel}/hr)</Label>
                 <Input
                   id="rate"
                   type="number"

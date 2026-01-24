@@ -42,6 +42,7 @@ export function userSettingsRowToUserSettings(row: UserSettingsRow): UserSetting
   return {
     userId: row.user_id,
     desiredHourlyRate: Number(row.desired_hourly_rate),
+    currencyCode: row.currency_code,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

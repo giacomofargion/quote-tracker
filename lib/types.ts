@@ -23,9 +23,12 @@ export interface Project {
   sessions: TimeSession[]
 }
 
+export type CurrencyCode = 'gbp' | 'usd' | 'eur'
+
 export interface UserSettings {
   userId: string
   desiredHourlyRate: number
+  currencyCode: CurrencyCode
   createdAt: Date
   updatedAt: Date
 }
@@ -59,6 +62,7 @@ export interface TimeSessionRow {
 export interface UserSettingsRow {
   user_id: string
   desired_hourly_rate: number
+  currency_code: CurrencyCode
   created_at: Date
   updated_at: Date
 }

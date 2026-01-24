@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS user_settings (
   user_id TEXT PRIMARY KEY,
   desired_hourly_rate DECIMAL(10, 2) NOT NULL DEFAULT 100.00,
+  currency_code TEXT NOT NULL DEFAULT 'gbp',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
