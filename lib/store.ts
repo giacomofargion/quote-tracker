@@ -8,6 +8,7 @@ interface AppState {
   isLoading: boolean
   error: string | null
   isInitialized: boolean
+  clearError: () => void
   
   // User settings
   settings: UserSettings | null
@@ -47,7 +48,8 @@ export const useStore = create<AppState>((set, get) => ({
   isLoading: false,
   error: null,
   isInitialized: false,
-  
+  clearError: () => set({ error: null }),
+
   // User settings
   settings: null,
   fetchSettings: async () => {
@@ -105,7 +107,11 @@ export const useStore = create<AppState>((set, get) => ({
           status: project.status,
         }),
       })
-      if (!response.ok) throw new Error('Failed to create project')
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        const message = typeof data?.error === 'string' ? data.error : `Failed to create project (${response.status})`
+        throw new Error(message)
+      }
       const newProject = await response.json()
       set((state) => ({
         projects: [newProject, ...state.projects],

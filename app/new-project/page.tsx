@@ -14,11 +14,16 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { StatefulButton } from '@/components/aceternity/stateful-button'
 import { PageTransition } from '@/components/page-transition'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export default function NewProjectPage() {
   const router = useRouter()
-  const { settings, fetchSettings, addProject, isLoading } = useStore()
+  const { settings, fetchSettings, addProject, isLoading, error, clearError } = useStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    clearError()
+  }, [clearError])
 
   const [name, setName] = useState('')
   const [client, setClient] = useState('')
@@ -75,6 +80,11 @@ export default function NewProjectPage() {
               <CardTitle className="text-xl sm:text-2xl">New Fixed-Price Project</CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name">Project Name</Label>
