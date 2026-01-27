@@ -47,12 +47,19 @@ export default function NewProjectPage() {
     : '0'
 
   const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault()
-
+    if (e) {
+      e.preventDefault()
+    }
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'new-project/page.tsx:handleSubmit:entry',message:'handleSubmit called',data:{name,quoteAmount,desiredHourlyRate,hasAll:!!(name&&quoteAmount&&desiredHourlyRate)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     if (!name || !quoteAmount || !desiredHourlyRate) return
 
     setIsSubmitting(true)
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'new-project/page.tsx:handleSubmit:beforeAddProject',message:'calling addProject',data:{name},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
       await addProject({
         name,
         client: client || 'No Client',
@@ -60,8 +67,14 @@ export default function NewProjectPage() {
         desiredHourlyRate: parseFloat(desiredHourlyRate),
         status: 'active',
       })
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'new-project/page.tsx:handleSubmit:afterAddProjectSuccess',message:'addProject succeeded, pushing to /',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+      // #endregion
       router.push('/')
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'new-project/page.tsx:handleSubmit:catch',message:'addProject threw',data:{errMsg:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3,H5'})}).catch(()=>{});
+      // #endregion
       console.error('Failed to create project:', error)
       setIsSubmitting(false)
     }
@@ -85,7 +98,7 @@ export default function NewProjectPage() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6" noValidate>
             <div className="space-y-2">
               <Label htmlFor="name">Project Name</Label>
               <Input
@@ -162,9 +175,15 @@ export default function NewProjectPage() {
                     Cancel
                   </Button>
                   <StatefulButton
-                    type="submit"
+                    type="button"
                     className="flex-1"
                     disabled={isLoading || isSubmitting}
+                    onClick={async (e) => {
+                      await handleSubmit(e)
+                    }}
+                    onError={(error) => {
+                      console.error('Create project error:', error)
+                    }}
                   >
                     Create Project
                   </StatefulButton>

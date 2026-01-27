@@ -96,17 +96,36 @@ export const useStore = create<AppState>((set, get) => ({
   addProject: async (project) => {
     try {
       set({ isLoading: true, error: null })
-      const response = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: project.name,
-          client: project.client,
-          quoteAmount: project.quoteAmount,
-          desiredHourlyRate: project.desiredHourlyRate,
-          status: project.status,
-        }),
-      })
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'store.ts:addProject:entry',message:'addProject called',data:{name:project.name},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
+      const requestBody = {
+        name: project.name,
+        client: project.client,
+        quoteAmount: project.quoteAmount,
+        desiredHourlyRate: project.desiredHourlyRate,
+        status: project.status,
+      }
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'store.ts:addProject:beforeFetch',message:'about to fetch',data:{url:'/api/projects',body:requestBody},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
+      let response: Response
+      try {
+        response = await fetch('/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        })
+      } catch (fetchError) {
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'store.ts:addProject:fetchError',message:'fetch threw',data:{errMsg:fetchError instanceof Error?fetchError.message:String(fetchError),errName:fetchError instanceof Error?fetchError.name:'unknown'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
+        console.error('Fetch error in addProject:', fetchError)
+        throw new Error(fetchError instanceof Error ? fetchError.message : 'Network error: Failed to reach server')
+      }
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'store.ts:addProject:response',message:'fetch completed',data:{status:response.status,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3,H5'})}).catch(()=>{});
+      // #endregion
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))
         const message = typeof data?.error === 'string' ? data.error : `Failed to create project (${response.status})`
@@ -117,7 +136,13 @@ export const useStore = create<AppState>((set, get) => ({
         projects: [newProject, ...state.projects],
         isLoading: false,
       }))
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'store.ts:addProject:success',message:'project added to store',data:{projectId:newProject?.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+      // #endregion
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'store.ts:addProject:catch',message:'addProject error',data:{errMsg:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3,H5'})}).catch(()=>{});
+      // #endregion
       set({ error: error instanceof Error ? error.message : 'Failed to create project', isLoading: false })
       throw error
     }

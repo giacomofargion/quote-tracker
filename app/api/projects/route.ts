@@ -62,15 +62,19 @@ export async function GET() {
 
 // POST /api/projects - Create a new project
 export async function POST(request: NextRequest) {
+  const log = (loc: string, msg: string, data: Record<string, unknown>) => {
+    fetch('http://127.0.0.1:7245/ingest/269b4729-02a3-48bd-8159-910386a265b2', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: loc, message: msg, data, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H3,H4,H5' }) }).catch(() => {})
+  }
   try {
     const { userId } = await auth()
-    
+    log('api/projects/route.ts:POST:auth', 'auth result', { hasUserId: !!userId })
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
     const { name, client, quoteAmount, desiredHourlyRate, status = 'active' } = body
+    log('api/projects/route.ts:POST:body', 'request body', { name, hasQuote: quoteAmount !== undefined, hasRate: desiredHourlyRate !== undefined })
 
     if (!name || quoteAmount === undefined || desiredHourlyRate === undefined) {
       return NextResponse.json(
@@ -86,9 +90,10 @@ export async function POST(request: NextRequest) {
       VALUES (${userId}, ${name}, ${client || 'No Client'}, ${quoteAmount}, ${desiredHourlyRate}, ${targetHours}, ${status})
       RETURNING *
     `
-
+    log('api/projects/route.ts:POST:insert', 'insert ok', { projectId: project?.id, status: 200 })
     return NextResponse.json(projectRowToProject(project))
   } catch (error) {
+    log('api/projects/route.ts:POST:catch', 'insert/error', { errMsg: error instanceof Error ? error.message : String(error), status: 500 })
     console.error('Error creating project:', error)
     return NextResponse.json(
       { error: 'Failed to create project' },
