@@ -44,7 +44,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { PageTransition } from '@/components/page-transition'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/hooks/use-toast'
 
@@ -106,51 +105,67 @@ export function ProjectDetail({ id }: { id: string }) {
     return () => clearInterval(interval)
   }, [isTimerActive, timerStartTime])
 
-  if (isLoading && !project) {
-    return (
-      <PageTransition>
+  // Show skeleton while loading OR if project not yet in store (avoids flash of "not found")
+  if (!project) {
+    // If we're not loading and project is missing, it genuinely doesn't exist
+    // But give fetchProjects a chance to run first (isInitialized check)
+    const { isInitialized } = useStore.getState()
+    if (isInitialized && !isLoading) {
+      return (
         <div className="space-y-6">
           <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </Link>
-          <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr,320px] xl:grid-cols-[1fr,340px]">
-            <Card className="border-dashed">
-              <CardContent className="p-4 sm:p-6 lg:p-8">
-                <div className="flex flex-col items-center justify-center py-4 sm:py-8">
-                  <Skeleton className="h-40 w-40 sm:h-56 sm:w-56 rounded-full mb-4" />
-                  <Skeleton className="h-10 w-48 mb-2" />
-                  <Skeleton className="h-6 w-32" />
-                </div>
-              </CardContent>
-            </Card>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <Card key={i} className="border-dashed">
-                    <CardContent className="p-3 sm:p-4">
-                      <Skeleton className="h-4 w-20 mb-2" />
-                      <Skeleton className="h-8 w-16" />
-                    </CardContent>
-                  </Card>
-                ))}
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Project not found</p>
+          </div>
+        </div>
+      )
+    }
+    // Still loading or not initialized yet - show skeleton
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors mt-1">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <Skeleton className="h-7 w-48 mb-2" />
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-4 w-32" />
               </div>
             </div>
           </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Skeleton className="h-9 w-20" />
+            <Skeleton className="h-9 w-9" />
+          </div>
         </div>
-      </PageTransition>
-    )
-  }
-
-  if (!project) {
-    return (
-      <div className="space-y-6">
-        <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Project not found</p>
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr,320px] xl:grid-cols-[1fr,340px]">
+          <Card className="border-dashed">
+            <CardContent className="p-4 sm:p-6 lg:p-8">
+              <div className="flex flex-col items-center justify-center py-4 sm:py-8">
+                <Skeleton className="h-40 w-40 sm:h-56 sm:w-56 rounded-full mb-4" />
+                <Skeleton className="h-10 w-48 mb-2" />
+                <Skeleton className="h-6 w-32" />
+              </div>
+            </CardContent>
+          </Card>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="border-dashed">
+                  <CardContent className="p-3 sm:p-4">
+                    <Skeleton className="h-4 w-20 mb-2" />
+                    <Skeleton className="h-8 w-16" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -242,15 +257,9 @@ export function ProjectDetail({ id }: { id: string }) {
   }
 
   return (
-    <PageTransition>
-      <div className="space-y-4 sm:space-y-6">
-        {/* Header */}
-        <motion.div
-          className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 sm:gap-4">
           <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors mt-1">
             <ArrowLeft className="h-5 w-5" />
@@ -304,7 +313,7 @@ export function ProjectDetail({ id }: { id: string }) {
             </AlertDialogContent>
           </AlertDialog>
         </div>
-        </motion.div>
+      </div>
 
       {/* Main Content */}
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr,320px] xl:grid-cols-[1fr,340px]">
@@ -725,7 +734,6 @@ export function ProjectDetail({ id }: { id: string }) {
           </form>
         </DialogContent>
       </Dialog>
-      </div>
-    </PageTransition>
+    </div>
   )
 }
