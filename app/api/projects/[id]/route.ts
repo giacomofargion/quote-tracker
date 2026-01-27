@@ -12,13 +12,13 @@ export async function GET(
   try {
     const { userId } = await auth()
     const { id } = await params
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const [project] = await sql<ProjectRow[]>`
-      SELECT * FROM projects 
+      SELECT * FROM projects
       WHERE id = ${id} AND user_id = ${userId}
     `
 
@@ -28,7 +28,7 @@ export async function GET(
 
     // Fetch sessions
     const sessions = await sql`
-      SELECT * FROM time_sessions 
+      SELECT * FROM time_sessions
       WHERE project_id = ${id}
       ORDER BY start_time DESC
     `
@@ -59,7 +59,7 @@ export async function PATCH(
   try {
     const { userId } = await auth()
     const { id } = await params
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -165,13 +165,13 @@ export async function DELETE(
   try {
     const { userId } = await auth()
     const { id } = await params
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const result = await sql`
-      DELETE FROM projects 
+      DELETE FROM projects
       WHERE id = ${id} AND user_id = ${userId}
       RETURNING id
     `

@@ -8,14 +8,14 @@ import type { ProjectRow, TimeSessionRow } from '@/lib/types'
 export async function GET() {
   try {
     const { userId } = await auth()
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Fetch projects
     const projects = await sql<ProjectRow[]>`
-      SELECT * FROM projects 
+      SELECT * FROM projects
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
     `
@@ -23,10 +23,10 @@ export async function GET() {
     // Fetch sessions for all projects
     const projectIds = projects.map(p => p.id)
     let sessions: TimeSessionRow[] = []
-    
+
     if (projectIds.length > 0) {
       sessions = await sql<TimeSessionRow[]>`
-        SELECT * FROM time_sessions 
+        SELECT * FROM time_sessions
         WHERE project_id = ANY(${projectIds})
         ORDER BY start_time DESC
       `

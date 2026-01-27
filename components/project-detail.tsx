@@ -49,7 +49,7 @@ import { toast } from '@/hooks/use-toast'
 
 export function ProjectDetail({ id }: { id: string }) {
   const router = useRouter()
-  const { projects, isLoading, fetchProjects, settings, fetchSettings, activeProjectId, timerStartTime, startTimer, stopTimer, updateProject, deleteSession, deleteProject } = useStore()
+  const { projects, isLoading, isInitialized, fetchProjects, settings, fetchSettings, activeProjectId, timerStartTime, startTimer, stopTimer, updateProject, deleteSession, deleteProject } = useStore()
   const [elapsedTime, setElapsedTime] = useState(0)
   const [isManualSessionOpen, setIsManualSessionOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -109,7 +109,6 @@ export function ProjectDetail({ id }: { id: string }) {
   if (!project) {
     // If we're not loading and project is missing, it genuinely doesn't exist
     // But give fetchProjects a chance to run first (isInitialized check)
-    const { isInitialized } = useStore.getState()
     if (isInitialized && !isLoading) {
       return (
         <div className="space-y-6">

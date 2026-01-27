@@ -11,7 +11,7 @@ export async function DELETE(
   try {
     const { userId } = await auth()
     const { id } = await params
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -27,7 +27,7 @@ export async function DELETE(
 
     // Verify project belongs to user
     const [project] = await sql<ProjectRow[]>`
-      SELECT id FROM projects 
+      SELECT id FROM projects
       WHERE id = ${session.project_id} AND user_id = ${userId}
     `
 
@@ -40,7 +40,7 @@ export async function DELETE(
 
     // Update project's total_tracked_time
     await sql`
-      UPDATE projects 
+      UPDATE projects
       SET total_tracked_time = GREATEST(0, total_tracked_time - ${session.duration})
       WHERE id = ${session.project_id}
     `

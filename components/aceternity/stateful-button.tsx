@@ -38,11 +38,11 @@ export const StatefulButton = ({
     if (disabled || state !== "idle") return;
 
     setState("loading");
-    
+
     try {
       await onClick?.(e);
       setState("success");
-      
+
       // Reset to idle after showing success state
       timeoutRef.current = setTimeout(() => {
         setState("idle");

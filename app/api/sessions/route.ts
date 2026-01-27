@@ -8,7 +8,7 @@ import type { TimeSessionRow, ProjectRow } from '@/lib/types'
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth()
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     // Verify project belongs to user
     const [project] = await sql<ProjectRow[]>`
-      SELECT id FROM projects 
+      SELECT id FROM projects
       WHERE id = ${projectId} AND user_id = ${userId}
     `
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     // Create session - convert ISO strings to Date objects for PostgreSQL
     const startTimeDate = new Date(startTime)
     const endTimeDate = endTime ? new Date(endTime) : null
-    
+
     const [session] = await sql<TimeSessionRow[]>`
       INSERT INTO time_sessions (project_id, start_time, end_time, duration, is_manual, note)
       VALUES (${projectId}, ${startTimeDate}, ${endTimeDate}, ${duration}, ${isManual}, ${note || null})
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // Update project's total_tracked_time
     await sql`
-      UPDATE projects 
+      UPDATE projects
       SET total_tracked_time = total_tracked_time + ${duration}
       WHERE id = ${projectId}
     `

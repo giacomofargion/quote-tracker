@@ -16,7 +16,7 @@ async function ensureCurrencyColumn() {
 export async function GET() {
   try {
     const { userId } = await auth()
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -50,7 +50,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     const { userId } = await auth()
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -89,8 +89,8 @@ export async function PATCH(request: NextRequest) {
     const [settings] = await sql<UserSettingsRow[]>`
       INSERT INTO user_settings (user_id, desired_hourly_rate, currency_code)
       VALUES (${userId}, ${nextDesiredHourlyRate}, ${nextCurrencyCode})
-      ON CONFLICT (user_id) 
-      DO UPDATE SET 
+      ON CONFLICT (user_id)
+      DO UPDATE SET
         desired_hourly_rate = ${nextDesiredHourlyRate},
         currency_code = ${nextCurrencyCode},
         updated_at = NOW()
