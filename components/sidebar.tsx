@@ -70,7 +70,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-6">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-            Q
+            QR
           </div>
           <span className="text-lg font-semibold text-sidebar-foreground">QuoteReality</span>
         </div>

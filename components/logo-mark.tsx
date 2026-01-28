@@ -11,7 +11,7 @@ export function LogoMark({ size = 'md' }: { size?: 'sm' | 'md' }) {
       className={`flex shrink-0 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground ${sizeClasses}`}
       aria-hidden
     >
-      Q
+      QR
     </div>
   )
 }

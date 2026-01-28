@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { sql } from '@/lib/db'
 import { projectRowToProject } from '@/lib/db/utils'
-import type { ProjectRow } from '@/lib/types'
+import type { ProjectRow, TimeSessionRow } from '@/lib/types'
 
 // GET /api/projects/[id] - Get a single project
 export async function GET(
@@ -68,6 +68,7 @@ export async function PATCH(
     const updates: Partial<{
       name: string
       client: string
+      description: string
       quote_amount: number
       desired_hourly_rate: number
       target_hours: number
@@ -76,6 +77,7 @@ export async function PATCH(
 
     if (body.name !== undefined) updates.name = body.name
     if (body.client !== undefined) updates.client = body.client
+    if (body.description !== undefined) updates.description = body.description
     if (body.quoteAmount !== undefined) updates.quote_amount = body.quoteAmount
     if (body.desiredHourlyRate !== undefined) updates.desired_hourly_rate = body.desiredHourlyRate
     if (body.status !== undefined) updates.status = body.status
@@ -109,6 +111,10 @@ export async function PATCH(
     if (updates.client !== undefined) {
       setClauses.push(`client = $${paramIndex++}`)
       queryParams.push(updates.client)
+    }
+    if (updates.description !== undefined) {
+      setClauses.push(`description = $${paramIndex++}`)
+      queryParams.push(updates.description)
     }
     if (updates.quote_amount !== undefined) {
       setClauses.push(`quote_amount = $${paramIndex++}`)
@@ -146,7 +152,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    return NextResponse.json(projectRowToProject(project))
+    const sessions = await sql<TimeSessionRow[]>`
+      SELECT * FROM time_sessions
+      WHERE project_id = ${id}
+      ORDER BY start_time DESC
+    `
+    const sessionsMapped = sessions.map((s) => ({
+      id: s.id,
+      projectId: s.project_id,
+      startTime: s.start_time,
+      endTime: s.end_time,
+      duration: s.duration,
+      isManual: s.is_manual,
+      note: s.note || undefined,
+    }))
+    return NextResponse.json(projectRowToProject(project, sessionsMapped))
   } catch (error) {
     console.error('Error updating project:', error)
     const errorMessage = error instanceof Error ? error.message : 'Failed to update project'

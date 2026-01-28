@@ -30,7 +30,7 @@ interface AppState {
   activeProjectId: string | null
   timerStartTime: Date | null
   startTimer: (projectId: string) => void
-  stopTimer: () => Promise<void>
+  stopTimer: (note?: string) => Promise<void>
 
   // Filters and sorting (client-side only)
   searchQuery: string
@@ -244,7 +244,7 @@ export const useStore = create<AppState>((set, get) => ({
       timerStartTime: new Date(),
     })
   },
-  stopTimer: async () => {
+  stopTimer: async (note?: string) => {
     const { activeProjectId, timerStartTime, addSession } = get()
     if (activeProjectId && timerStartTime) {
       const endTime = new Date()
@@ -257,6 +257,7 @@ export const useStore = create<AppState>((set, get) => ({
             endTime,
             duration,
             isManual: false,
+            note: note?.trim() || undefined,
           })
         } catch (error) {
           console.error('Failed to save session:', error)
