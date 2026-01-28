@@ -4,7 +4,6 @@ import { ClerkProvider } from '@clerk/nextjs'
 
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
-import { SidebarWrapper } from '@/components/sidebar-wrapper'
 
 import { Geist_Mono, Exo_2 as V0_Font_Exo_2, Geist_Mono as V0_Font_Geist_Mono } from 'next/font/google'
 
@@ -44,7 +43,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" className="dark">
         <body className="font-sans antialiased">
-          <SidebarWrapper>{children}</SidebarWrapper>
+          {children}
           <Analytics />
         </body>
       </html>

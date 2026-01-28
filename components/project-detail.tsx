@@ -112,7 +112,7 @@ export function ProjectDetail({ id }: { id: string }) {
     if (isInitialized && !isLoading) {
       return (
         <div className="space-y-6">
-          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Link href="/dashboard" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </Link>
@@ -127,7 +127,7 @@ export function ProjectDetail({ id }: { id: string }) {
       <div className="space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3 sm:gap-4">
-            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors mt-1">
+            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors mt-1">
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div className="min-w-0 flex-1">
@@ -196,7 +196,7 @@ export function ProjectDetail({ id }: { id: string }) {
   const handleDeleteProject = async () => {
     try {
       await deleteProject(project.id)
-      router.push('/')
+      router.push('/dashboard')
     } catch (error) {
       console.error('Failed to delete project:', error)
     }

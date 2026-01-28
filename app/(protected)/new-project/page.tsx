@@ -61,7 +61,7 @@ export default function NewProjectPage() {
         desiredHourlyRate: parseFloat(desiredHourlyRate),
         status: 'active',
       })
-      router.push('/')
+      router.push('/dashboard')
     } catch (error) {
       console.error('Failed to create project:', error)
       setIsSubmitting(false)
@@ -157,7 +157,7 @@ export default function NewProjectPage() {
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => router.push('/')}
+                    onClick={() => router.push('/dashboard')}
                     className="w-full sm:w-auto"
                   >
                     Cancel

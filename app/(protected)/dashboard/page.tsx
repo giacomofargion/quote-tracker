@@ -16,7 +16,7 @@ import { CardSpotlight } from '@/components/aceternity/card-spotlight'
 import { AuroraBackground } from '@/components/ui/aurora-background'
 import { PageTransition } from '@/components/page-transition'
 
-export default function Home() {
+export default function DashboardPage() {
   const {
     projects,
     isLoading,
