@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { Sidebar } from './sidebar'
 import { Button } from '@/components/ui/button'
+import { LogoMark } from '@/components/logo-mark'
 import { Menu } from 'lucide-react'
 
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
@@ -32,9 +33,7 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
             <span className="sr-only">Open menu</span>
           </Button>
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
-              Q
-            </div>
+            <LogoMark size="sm" />
             <span className="font-semibold">QuoteReality</span>
           </div>
         </div>

@@ -1,0 +1,46 @@
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/","url":"http://localhost:3001/","publicRoute":true},"timestamp":1769619428998,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/","url":"http://localhost:3001/","publicRoute":true},"timestamp":1769619430876,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/sign-in","url":"http://localhost:3001/sign-in?redirect_url=%2Fdashboard","publicRoute":true},"timestamp":1769619435382,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"sign-in/page.tsx","message":"sign-in page mounted","data":{"pathname":"/sign-in"},"timestamp":1769619436002,"sessionId":"debug-session","hypothesisId":"B,D"}
+{"location":"sign-in/page.tsx","message":"sign-in page unmounting","data":{"pathname":"/sign-in"},"timestamp":1769619436003,"sessionId":"debug-session","hypothesisId":"B,C"}
+{"location":"sign-in/page.tsx","message":"sign-in page mounted","data":{"pathname":"/sign-in"},"timestamp":1769619436003,"sessionId":"debug-session","hypothesisId":"B,D"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/sign-in/SignIn_clerk_catchall_check_1769619436002","url":"http://localhost:3001/sign-in/SignIn_clerk_catchall_check_1769619436002","publicRoute":true},"timestamp":1769619436023,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/dashboard","url":"http://localhost:3001/dashboard","publicRoute":false},"timestamp":1769619436057,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"calling auth.protect for protected route","data":{"path":"/dashboard"},"timestamp":1769619436057,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"auth.protect passed","data":{"path":"/dashboard"},"timestamp":1769619436058,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"sign-in/page.tsx","message":"sign-in page unmounting","data":{"pathname":"/sign-in"},"timestamp":1769619436683,"sessionId":"debug-session","hypothesisId":"B,C"}
+{"location":"dashboard/page.tsx","message":"dashboard page mounted","data":{"pathname":"/dashboard","referrer":"http://localhost:3001/"},"timestamp":1769619436684,"sessionId":"debug-session","hypothesisId":"A,B,C,D"}
+{"location":"dashboard/page.tsx","message":"dashboard page mounted","data":{"pathname":"/dashboard","referrer":"http://localhost:3001/"},"timestamp":1769619436685,"sessionId":"debug-session","hypothesisId":"A,B,C,D"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/api/projects","url":"http://localhost:3001/api/projects","publicRoute":false},"timestamp":1769619436719,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"calling auth.protect for protected route","data":{"path":"/api/projects"},"timestamp":1769619436719,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"auth.protect passed","data":{"path":"/api/projects"},"timestamp":1769619436722,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/api/settings","url":"http://localhost:3001/api/settings","publicRoute":false},"timestamp":1769619436734,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"calling auth.protect for protected route","data":{"path":"/api/settings"},"timestamp":1769619436734,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"auth.protect passed","data":{"path":"/api/settings"},"timestamp":1769619436736,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/api/settings","url":"http://localhost:3001/api/settings","publicRoute":false},"timestamp":1769619437912,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"calling auth.protect for protected route","data":{"path":"/api/settings"},"timestamp":1769619437912,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"auth.protect passed","data":{"path":"/api/settings"},"timestamp":1769619437913,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/api/projects","url":"http://localhost:3001/api/projects","publicRoute":false},"timestamp":1769619438388,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"calling auth.protect for protected route","data":{"path":"/api/projects"},"timestamp":1769619438388,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"auth.protect passed","data":{"path":"/api/projects"},"timestamp":1769619438390,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/dashboard","url":"http://localhost:3001/dashboard","publicRoute":false},"timestamp":1769619441644,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"calling auth.protect for protected route","data":{"path":"/dashboard"},"timestamp":1769619441644,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"auth.protect passed","data":{"path":"/dashboard"},"timestamp":1769619441647,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/","url":"http://localhost:3001/","publicRoute":true},"timestamp":1769619441967,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/","url":"http://localhost:3001/","publicRoute":true},"timestamp":1769619442030,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/sign-in","url":"http://localhost:3001/sign-in?redirect_url=%2Fdashboard","publicRoute":true},"timestamp":1769619443953,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"sign-in/page.tsx","message":"sign-in page mounted","data":{"pathname":"/sign-in"},"timestamp":1769619444014,"sessionId":"debug-session","hypothesisId":"B,D"}
+{"location":"sign-in/page.tsx","message":"sign-in page unmounting","data":{"pathname":"/sign-in"},"timestamp":1769619444014,"sessionId":"debug-session","hypothesisId":"B,C"}
+{"location":"sign-in/page.tsx","message":"sign-in page mounted","data":{"pathname":"/sign-in"},"timestamp":1769619444014,"sessionId":"debug-session","hypothesisId":"B,D"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/sign-in/SignIn_clerk_catchall_check_1769619444014","url":"http://localhost:3001/sign-in/SignIn_clerk_catchall_check_1769619444014","publicRoute":true},"timestamp":1769619444020,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/sign-in","url":"http://localhost:3001/sign-in?redirect_url=%2Fdashboard","publicRoute":true},"timestamp":1769619455658,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/dashboard","url":"http://localhost:3001/dashboard","publicRoute":false},"timestamp":1769619455908,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"calling auth.protect for protected route","data":{"path":"/dashboard"},"timestamp":1769619455908,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"auth.protect passed","data":{"path":"/dashboard"},"timestamp":1769619455909,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"sign-in/page.tsx","message":"sign-in page unmounting","data":{"pathname":"/sign-in"},"timestamp":1769619455947,"sessionId":"debug-session","hypothesisId":"B,C"}
+{"location":"dashboard/page.tsx","message":"dashboard page mounted","data":{"pathname":"/dashboard","referrer":"http://localhost:3001/"},"timestamp":1769619455947,"sessionId":"debug-session","hypothesisId":"A,B,C,D"}
+{"location":"dashboard/page.tsx","message":"dashboard page mounted","data":{"pathname":"/dashboard","referrer":"http://localhost:3001/"},"timestamp":1769619455948,"sessionId":"debug-session","hypothesisId":"A,B,C,D"}
+{"location":"middleware.ts","message":"middleware run","data":{"path":"/dashboard","url":"http://localhost:3001/dashboard","publicRoute":false},"timestamp":1769619455975,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"calling auth.protect for protected route","data":{"path":"/dashboard"},"timestamp":1769619455975,"sessionId":"debug-session","hypothesisId":"A,E"}
+{"location":"middleware.ts","message":"auth.protect passed","data":{"path":"/dashboard"},"timestamp":1769619455976,"sessionId":"debug-session","hypothesisId":"E"}
+{"location":"dashboard/page.tsx","message":"dashboard page mounted","data":{"pathname":"/dashboard","referrer":"http://localhost:3001/dashboard"},"timestamp":1769619507423,"sessionId":"debug-session","hypothesisId":"A,B,C,D"}
