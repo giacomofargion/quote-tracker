@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, client, quoteAmount, desiredHourlyRate, status = 'active' } = body
+    const { name, client, description, quoteAmount, desiredHourlyRate, status = 'active' } = body
 
     if (!name || quoteAmount === undefined || desiredHourlyRate === undefined) {
       return NextResponse.json(
@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
     const targetHours = quoteAmount / desiredHourlyRate
 
     const [project] = await sql<ProjectRow[]>`
-      INSERT INTO projects (user_id, name, client, quote_amount, desired_hourly_rate, target_hours, status)
-      VALUES (${userId}, ${name}, ${client || 'No Client'}, ${quoteAmount}, ${desiredHourlyRate}, ${targetHours}, ${status})
+      INSERT INTO projects (user_id, name, client, description, quote_amount, desired_hourly_rate, target_hours, status)
+      VALUES (${userId}, ${name}, ${client || 'No Client'}, ${description ?? ''}, ${quoteAmount}, ${desiredHourlyRate}, ${targetHours}, ${status})
       RETURNING *
     `
 

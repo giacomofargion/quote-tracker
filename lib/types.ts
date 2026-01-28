@@ -13,6 +13,7 @@ export interface Project {
   userId: string
   name: string
   client: string
+  description?: string
   quoteAmount: number
   desiredHourlyRate: number
   targetHours: number // auto-calculated: quoteAmount / desiredHourlyRate
@@ -39,6 +40,7 @@ export interface ProjectRow {
   user_id: string
   name: string
   client: string
+  description?: string | null
   quote_amount: number
   desired_hourly_rate: number
   target_hours: number

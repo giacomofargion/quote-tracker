@@ -87,11 +87,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         <Link
-          href="/"
+          href="/dashboard"
           onClick={handleLinkClick}
           className={cn(
             'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-            pathname === '/'
+            pathname === '/dashboard'
               ? 'bg-sidebar-accent text-sidebar-accent-foreground'
               : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
           )}
@@ -194,7 +194,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           Settings
         </Link>
         <div className="pt-2 border-t border-sidebar-border">
-          <UserButton afterSignOutUrl="/sign-in" />
+          <UserButton afterSignOutUrl="/" />
         </div>
       </div>
     </aside>

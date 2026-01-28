@@ -25,6 +25,7 @@ CLERK_SECRET_KEY=sk_test_...
 2. **Run the Schema**
    - Execute the SQL in `lib/db/schema.sql` in your Neon SQL editor
    - This creates all necessary tables, indexes, and triggers
+   - If you already had a database, run any SQL in `lib/db/migrations/` to add new columns (e.g. `001_add_project_description.sql` for the project description field)
 
 ### Clerk Setup
 
