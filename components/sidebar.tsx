@@ -36,12 +36,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       setElapsedTime(0)
       return
     }
-    
+
     const interval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - new Date(timerStartTime).getTime()) / 1000)
       setElapsedTime(elapsed)
     }, 1000)
-    
+
     return () => clearInterval(interval)
   }, [activeProjectId, timerStartTime])
 
@@ -170,8 +170,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </div>
       )}
 
-      {/* Bottom Actions */}
-      <div className="border-t border-sidebar-border p-3 space-y-1">
+      {/* Bottom Actions — extra bottom padding on mobile so Settings + Clerk avatar sit above the browser UI bar */}
+      <div className="border-t border-sidebar-border p-3 pb-24 space-y-1 lg:pb-3">
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
