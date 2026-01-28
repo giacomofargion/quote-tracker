@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS projects (
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   client TEXT NOT NULL,
+  description TEXT,
   quote_amount DECIMAL(10, 2) NOT NULL,
   desired_hourly_rate DECIMAL(10, 2) NOT NULL,
   target_hours DECIMAL(10, 2) NOT NULL,

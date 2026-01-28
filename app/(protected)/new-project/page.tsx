@@ -42,9 +42,10 @@ export default function NewProjectPage() {
   const currencyCode = settings?.currencyCode ?? 'gbp'
   const currencyLabel = currencyOptions.find((option) => option.value === currencyCode)?.label ?? 'GBP (£)'
 
-  const budgetedTime = quoteAmount && desiredHourlyRate
-    ? (parseFloat(quoteAmount) / parseFloat(desiredHourlyRate)).toFixed(1)
-    : '0'
+  const qa = parseFloat(quoteAmount)
+  const dr = parseFloat(desiredHourlyRate)
+  const budgetedTime =
+    dr > 0 && Number.isFinite(qa) ? (qa / dr).toFixed(1) : '0'
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) {
@@ -57,6 +58,7 @@ export default function NewProjectPage() {
       await addProject({
         name,
         client: client || 'No Client',
+        description: description || '',
         quoteAmount: parseFloat(quoteAmount),
         desiredHourlyRate: parseFloat(desiredHourlyRate),
         status: 'active',

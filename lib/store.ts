@@ -102,6 +102,7 @@ export const useStore = create<AppState>((set, get) => ({
         body: JSON.stringify({
           name: project.name,
           client: project.client,
+          description: project.description ?? '',
           quoteAmount: project.quoteAmount,
           desiredHourlyRate: project.desiredHourlyRate,
           status: project.status,

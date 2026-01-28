@@ -9,6 +9,7 @@ export function projectRowToProject(row: ProjectRow, sessions: TimeSession[] = [
     userId: row.user_id,
     name: row.name,
     client: row.client,
+    ...(row.description != null && { description: row.description }),
     quoteAmount: Number(row.quote_amount),
     desiredHourlyRate: Number(row.desired_hourly_rate),
     targetHours: Number(row.target_hours),

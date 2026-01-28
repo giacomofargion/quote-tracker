@@ -16,6 +16,9 @@ import { CardSpotlight } from '@/components/aceternity/card-spotlight'
 import { AuroraBackground } from '@/components/ui/aurora-background'
 import { PageTransition } from '@/components/page-transition'
 
+/** Max stagger delay so large lists don't wait too long for later items to animate in */
+const STAGGER_MAX_DELAY = 0.5
+
 export default function DashboardPage() {
   const {
     projects,
@@ -29,6 +32,7 @@ export default function DashboardPage() {
     sortField,
     setSortField,
     sortDirection,
+    setSortDirection,
     settings,
     fetchSettings,
   } = useStore()
@@ -143,8 +147,9 @@ export default function DashboardPage() {
           <Select
             value={`${sortField}-${sortDirection}`}
             onValueChange={(v) => {
-              const [field] = v.split('-') as [typeof sortField]
+              const [field, direction] = v.split('-') as [typeof sortField, typeof sortDirection]
               setSortField(field)
+              setSortDirection(direction)
             }}
           >
             <SelectTrigger className="w-full sm:w-[150px]">
@@ -209,13 +214,14 @@ export default function DashboardPage() {
               const hours = Math.floor(project.totalTrackedTime / 3600)
               const minutes = Math.floor((project.totalTrackedTime % 3600) / 60)
               const isCompleted = project.status === 'completed'
+              const delay = Math.min(index * 0.05, STAGGER_MAX_DELAY)
 
               return (
                 <motion.div
                   key={project.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  transition={{ duration: 0.3, delay }}
                 >
                   <Link href={`/project/${project.id}`}>
                     <CardSpotlight
