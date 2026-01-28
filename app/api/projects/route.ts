@@ -69,6 +69,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Projects FK references user_settings; ensure the user has a row so INSERT doesn't fail
+    await sql`
+      INSERT INTO user_settings (user_id, desired_hourly_rate, currency_code)
+      VALUES (${userId}, 100.00, 'gbp')
+      ON CONFLICT (user_id) DO NOTHING
+    `
+
     const body = await request.json()
     const { name, client, description, quoteAmount, desiredHourlyRate, status = 'active' } = body
 
@@ -80,6 +87,9 @@ export async function POST(request: NextRequest) {
     }
 
     const targetHours = quoteAmount / desiredHourlyRate
+
+    // Ensure description column exists (DB may have been created before migration)
+    await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS description TEXT`
 
     const [project] = await sql<ProjectRow[]>`
       INSERT INTO projects (user_id, name, client, description, quote_amount, desired_hourly_rate, target_hours, status)

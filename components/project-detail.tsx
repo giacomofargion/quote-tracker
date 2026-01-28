@@ -260,7 +260,7 @@ export function ProjectDetail({ id }: { id: string }) {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 sm:gap-4">
-          <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors mt-1">
+          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors mt-1">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="min-w-0 flex-1">

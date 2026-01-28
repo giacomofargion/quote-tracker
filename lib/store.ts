@@ -9,29 +9,29 @@ interface AppState {
   error: string | null
   isInitialized: boolean
   clearError: () => void
-  
+
   // User settings
   settings: UserSettings | null
   fetchSettings: () => Promise<void>
   updateSettings: (settings: Partial<UserSettings>) => Promise<void>
-  
+
   // Projects
   projects: Project[]
   fetchProjects: () => Promise<void>
   addProject: (project: Omit<Project, 'id' | 'userId' | 'targetHours' | 'totalTrackedTime' | 'createdAt' | 'updatedAt' | 'sessions'>) => Promise<void>
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
-  
+
   // Time sessions
   addSession: (projectId: string, session: Omit<TimeSession, 'id' | 'projectId'>) => Promise<void>
   deleteSession: (projectId: string, sessionId: string) => Promise<void>
-  
+
   // Active timer (client-side only, persists across navigation)
   activeProjectId: string | null
   timerStartTime: Date | null
   startTimer: (projectId: string) => void
   stopTimer: () => Promise<void>
-  
+
   // Filters and sorting (client-side only)
   searchQuery: string
   setSearchQuery: (query: string) => void
@@ -79,7 +79,7 @@ export const useStore = create<AppState>((set, get) => ({
       throw error
     }
   },
-  
+
   // Projects
   projects: [],
   fetchProjects: async () => {
@@ -164,7 +164,7 @@ export const useStore = create<AppState>((set, get) => ({
       throw error
     }
   },
-  
+
   // Time sessions
   addSession: async (projectId, session) => {
     try {
@@ -183,7 +183,7 @@ export const useStore = create<AppState>((set, get) => ({
       })
       if (!response.ok) throw new Error('Failed to create session')
       const newSession = await response.json()
-      
+
       // Update local state optimistically
       set((state) => ({
         projects: state.projects.map((p) => {
@@ -210,7 +210,7 @@ export const useStore = create<AppState>((set, get) => ({
         method: 'DELETE',
       })
       if (!response.ok) throw new Error('Failed to delete session')
-      
+
       // Update local state optimistically
       set((state) => {
         const project = state.projects.find((p) => p.id === projectId)
@@ -234,7 +234,7 @@ export const useStore = create<AppState>((set, get) => ({
       throw error
     }
   },
-  
+
   // Active timer (client-side only)
   activeProjectId: null,
   timerStartTime: null,
@@ -249,7 +249,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (activeProjectId && timerStartTime) {
       const endTime = new Date()
       const duration = Math.floor((endTime.getTime() - timerStartTime.getTime()) / 1000)
-      
+
       if (duration > 0) {
         try {
           await addSession(activeProjectId, {
@@ -270,7 +270,7 @@ export const useStore = create<AppState>((set, get) => ({
       timerStartTime: null,
     })
   },
-  
+
   // Filters and sorting (client-side only)
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
