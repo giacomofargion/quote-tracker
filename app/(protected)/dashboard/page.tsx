@@ -22,7 +22,6 @@ const STAGGER_MAX_DELAY = 0.5
 export default function DashboardPage() {
   const {
     projects,
-    isLoading,
     isInitialized,
     fetchProjects,
     searchQuery,
@@ -179,7 +178,7 @@ export default function DashboardPage() {
       {/* Projects */}
       <div>
         <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Projects</h2>
-        {isLoading && !isInitialized ? (
+        {!isInitialized ? (
           <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {[1, 2, 3].map((i) => (
               <motion.div

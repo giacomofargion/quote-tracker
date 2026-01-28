@@ -61,6 +61,9 @@ export function ProjectDetail({ id }: { id: string }) {
   const [editRate, setEditRate] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editStatus, setEditStatus] = useState<'active' | 'completed'>('active')
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false)
+  const [sessionNotesOpen, setSessionNotesOpen] = useState(false)
+  const [sessionNotes, setSessionNotes] = useState('')
 
   const project = projects.find((p) => p.id === id)
   const currencyCode = settings?.currencyCode ?? 'gbp'
@@ -87,6 +90,7 @@ export function ProjectDetail({ id }: { id: string }) {
       setEditClient(project.client)
       setEditQuote(project.quoteAmount.toString())
       setEditRate(project.desiredHourlyRate.toString())
+      setEditDescription(project.description ?? '')
       setEditStatus(project.status)
     }
   }, [project])
@@ -187,10 +191,23 @@ export function ProjectDetail({ id }: { id: string }) {
 
   const handleTimerToggle = () => {
     if (isTimerActive) {
-      stopTimer()
+      setSessionNotes('')
+      setSessionNotesOpen(true)
     } else {
       startTimer(project.id)
     }
+  }
+
+  const handleSessionNotesSkip = async () => {
+    setSessionNotesOpen(false)
+    await stopTimer()
+    setSessionNotes('')
+  }
+
+  const handleSessionNotesSave = async () => {
+    setSessionNotesOpen(false)
+    await stopTimer(sessionNotes.trim() || undefined)
+    setSessionNotes('')
   }
 
   const handleDeleteProject = async () => {
@@ -210,6 +227,7 @@ export function ProjectDetail({ id }: { id: string }) {
         client: editClient,
         quoteAmount: parseFloat(editQuote),
         desiredHourlyRate: parseFloat(editRate),
+        description: editDescription,
         status: editStatus,
       })
       setIsEditOpen(false)
@@ -279,6 +297,27 @@ export function ProjectDetail({ id }: { id: string }) {
                 Target: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
               </span>
             </div>
+            {project.description?.trim() ? (
+              <div className="mt-2">
+                <p
+                  className={cn(
+                    "text-sm text-muted-foreground",
+                    !descriptionExpanded && "line-clamp-3"
+                  )}
+                >
+                  {project.description}
+                </p>
+                {project.description.length > 120 && (
+                  <button
+                    type="button"
+                    onClick={() => setDescriptionExpanded((prev) => !prev)}
+                    className="text-xs text-primary hover:underline mt-0.5"
+                  >
+                    {descriptionExpanded ? "Show less" : "Show more"}
+                  </button>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -370,7 +409,7 @@ export function ProjectDetail({ id }: { id: string }) {
                     {formatCurrency(effectiveRate, currencyCode)}
                   </motion.span>
                   <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                    Effective / HR
+                    Current Rate / HR
                   </span>
                 </div>
               </motion.div>
@@ -386,7 +425,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 </p>
                 {!isAboveTarget && project.totalTrackedTime > 0 && (
                   <p className="text-red-500 text-sm mt-1">
-                    {rateDifference.toFixed(0)} below target
+                    {formatCurrency(rateDifference, currencyCode)} below target
                   </p>
                 )}
               </motion.div>
@@ -563,9 +602,10 @@ export function ProjectDetail({ id }: { id: string }) {
                 </p>
               ) : (
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground pb-2 border-b">
-                    <span>Date</span>
-                    <span>Duration</span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground pb-2 border-b">
+                    <span className="shrink-0">Date</span>
+                    <span className="flex-1 min-w-0 text-center">Notes</span>
+                    <span className="shrink-0">Duration</span>
                   </div>
                   <div className="max-h-[200px] sm:max-h-[300px] overflow-y-auto space-y-1">
                     <AnimatePresence>
@@ -576,9 +616,9 @@ export function ProjectDetail({ id }: { id: string }) {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
                           transition={{ duration: 0.2, delay: index * 0.05 }}
-                          className="flex items-center justify-between py-2 group"
+                          className="flex items-center gap-2 py-2 group"
                         >
-                        <div className="min-w-0">
+                        <div className="min-w-0 shrink-0">
                           <p className="text-xs sm:text-sm">
                             {new Date(session.startTime).toLocaleDateString('en-US', {
                               month: 'short',
@@ -594,7 +634,16 @@ export function ProjectDetail({ id }: { id: string }) {
                             })}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0 flex items-center justify-center">
+                          {session.note ? (
+                            <span className="text-xs text-muted-foreground truncate max-w-full" title={session.note}>
+                              {session.note.length > 80 ? `${session.note.slice(0, 80)}…` : session.note}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground/50">—</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs sm:text-sm font-mono">
                             {formatDuration(session.duration)}
                           </span>
@@ -731,6 +780,48 @@ export function ProjectDetail({ id }: { id: string }) {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Session notes dialog – shown after stopping the timer */}
+      <Dialog open={sessionNotesOpen} onOpenChange={(open) => { if (!open) handleSessionNotesSkip() }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add notes</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Optional: add a short note for this session (e.g. what you worked on).
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="session-notes">Notes</Label>
+            <Textarea
+              id="session-notes"
+              value={sessionNotes}
+              onChange={(e) => setSessionNotes(e.target.value.slice(0, 200))}
+              placeholder="e.g. Refined proposal, client emails..."
+              rows={3}
+              maxLength={200}
+              className="resize-none"
+            />
+            <p className="text-xs text-muted-foreground">{sessionNotes.length}/200</p>
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleSessionNotesSkip}
+              className="sm:w-auto"
+            >
+              Skip
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSessionNotesSave}
+              className="flex-1"
+            >
+              Add notes
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
