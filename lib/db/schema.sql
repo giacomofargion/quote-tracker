@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   user_id TEXT PRIMARY KEY,
   desired_hourly_rate DECIMAL(10, 2) NOT NULL DEFAULT 100.00,
   currency_code TEXT NOT NULL DEFAULT 'gbp',
+  hours_per_day DECIMAL(4, 1) NOT NULL DEFAULT 8.0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -18,6 +19,8 @@ CREATE TABLE IF NOT EXISTS projects (
   description TEXT,
   quote_amount DECIMAL(10, 2) NOT NULL,
   desired_hourly_rate DECIMAL(10, 2) NOT NULL,
+  desired_day_rate DECIMAL(10, 2),
+  hours_per_day DECIMAL(4, 1),
   target_hours DECIMAL(10, 2) NOT NULL,
   total_tracked_time INTEGER NOT NULL DEFAULT 0, -- in seconds
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed')),

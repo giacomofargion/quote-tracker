@@ -99,7 +99,7 @@ export default function DashboardPage() {
       case 'name': return 'Name'
       case 'client': return 'Client'
       case 'quoteAmount': return 'Quote Amount'
-      case 'effectiveRate': return 'Effective Rate'
+      case 'effectiveRate': return 'Current Rate'
       default: return 'Newest First'
     }
   }
@@ -159,7 +159,7 @@ export default function DashboardPage() {
               <SelectItem value="createdAt-asc">Oldest First</SelectItem>
               <SelectItem value="name-asc">Name</SelectItem>
               <SelectItem value="quoteAmount-desc">Quote Amount</SelectItem>
-              <SelectItem value="effectiveRate-desc">Effective Rate</SelectItem>
+              <SelectItem value="effectiveRate-desc">Current Rate</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                       </p>
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="text-xs sm:text-sm text-muted-foreground">Effective Rate</span>
+                          <span className="text-xs sm:text-sm text-muted-foreground">Current Rate</span>
                           <p className={cn(
                             'font-mono font-semibold text-sm sm:text-base',
                             isAboveTarget ? 'text-emerald-500' : 'text-red-500'

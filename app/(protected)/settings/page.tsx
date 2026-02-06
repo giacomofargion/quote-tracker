@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const { settings, fetchSettings, updateSettings, projects, fetchProjects, isLoading } = useStore()
   const [desiredHourlyRate, setDesiredHourlyRate] = useState('')
   const [currencyCode, setCurrencyCode] = useState<'gbp' | 'usd' | 'eur'>('gbp')
+  const [hoursPerDay, setHoursPerDay] = useState('')
   const [saved, setSaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -33,6 +34,7 @@ export default function SettingsPage() {
     } else {
       setDesiredHourlyRate(settings.desiredHourlyRate.toString())
       setCurrencyCode(settings.currencyCode)
+      setHoursPerDay(settings.hoursPerDay.toString())
     }
   }, [settings, fetchSettings])
 
@@ -43,12 +45,13 @@ export default function SettingsPage() {
   }, [projects.length, fetchProjects])
 
   const handleSaveChanges = async () => {
-    if (!desiredHourlyRate) return
+    if (!desiredHourlyRate || !hoursPerDay) return
     setIsSaving(true)
     try {
       await updateSettings({
         desiredHourlyRate: parseFloat(desiredHourlyRate),
         currencyCode,
+        hoursPerDay: parseFloat(hoursPerDay),
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
@@ -75,7 +78,7 @@ export default function SettingsPage() {
   }
 
   const handleExportCSV = () => {
-    const headers = ['Project Name', 'Client', 'Quote Amount', 'Target Rate', 'Target Hours', 'Time Tracked (hours)', 'Status', 'Created At']
+    const headers = ['Project Name', 'Client', 'Quote Amount', 'Baseline Rate', 'Target Hours', 'Time Tracked (hours)', 'Status', 'Created At']
     const rows = projects.map(p => [
       p.name,
       p.client,
@@ -86,7 +89,7 @@ export default function SettingsPage() {
       p.status,
       new Date(p.createdAt).toISOString(),
     ])
-    
+
     const csvContent = [headers.join(','), ...rows.map(r => r.map(cell => `"${cell}"`).join(','))].join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -126,6 +129,22 @@ export default function SettingsPage() {
                 className="w-full sm:w-48"
               />
               <span className="text-muted-foreground text-sm">per hour</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="hoursPerDay">Hours Per Day</Label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <Input
+                id="hoursPerDay"
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={hoursPerDay}
+                onChange={(e) => setHoursPerDay(e.target.value)}
+                className="w-full sm:w-48"
+              />
+              <span className="text-muted-foreground text-sm">used for day-rate conversions</span>
             </div>
           </div>
 
