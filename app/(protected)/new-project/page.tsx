@@ -38,7 +38,11 @@ export default function NewProjectPage() {
     if (!settings) {
       fetchSettings()
     } else {
-      setDesiredHourlyRate(settings.desiredHourlyRate.toString())
+      const hourlyRate = Number(settings.desiredHourlyRate) || 0
+      const globalHoursPerDayForRate = settings.hoursPerDay ?? 8
+      const dayRate = hourlyRate * globalHoursPerDayForRate
+      setDesiredHourlyRate(hourlyRate.toString())
+      setDesiredDayRate(dayRate.toString())
     }
   }, [settings, fetchSettings])
 
@@ -67,7 +71,8 @@ export default function NewProjectPage() {
     if (e) {
       e.preventDefault()
     }
-    const hasRate = rateType === 'daily' ? !!desiredDayRate : !!desiredHourlyRate
+    const rateValue = rateType === 'daily' ? parseFloat(desiredDayRate) : parseFloat(desiredHourlyRate)
+    const hasRate = Number.isFinite(rateValue) && rateValue > 0
     if (!name || !quoteAmount || !hasRate) return
 
     setIsSubmitting(true)
