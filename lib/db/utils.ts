@@ -12,6 +12,8 @@ export function projectRowToProject(row: ProjectRow, sessions: TimeSession[] = [
     ...(row.description != null && { description: row.description }),
     quoteAmount: Number(row.quote_amount),
     desiredHourlyRate: Number(row.desired_hourly_rate),
+    desiredDayRate: row.desired_day_rate == null ? null : Number(row.desired_day_rate),
+    hoursPerDay: row.hours_per_day == null ? null : Number(row.hours_per_day),
     targetHours: Number(row.target_hours),
     totalTrackedTime: row.total_tracked_time,
     status: row.status,
@@ -44,6 +46,8 @@ export function userSettingsRowToUserSettings(row: UserSettingsRow): UserSetting
     userId: row.user_id,
     desiredHourlyRate: Number(row.desired_hourly_rate),
     currencyCode: row.currency_code,
+    // Backwards-compatible default for older DBs/users.
+    hoursPerDay: Number(row.hours_per_day ?? 8),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

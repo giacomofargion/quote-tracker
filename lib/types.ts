@@ -16,6 +16,17 @@ export interface Project {
   description?: string
   quoteAmount: number
   desiredHourlyRate: number
+  /**
+   * Some freelancers quote day rates instead of hourly.
+   * When null, the project is using the hourly-rate workflow.
+   * When present, we can derive an hourly rate via (desiredDayRate / hoursPerDay).
+   */
+  desiredDayRate: number | null
+  /**
+   * Custom hours per day for this project. If null, uses the global setting from user_settings.
+   * Used for day-rate conversions and day-rate analytics.
+   */
+  hoursPerDay: number | null
   targetHours: number // auto-calculated: quoteAmount / desiredHourlyRate
   totalTrackedTime: number // in seconds
   status: 'active' | 'completed'
@@ -30,6 +41,11 @@ export interface UserSettings {
   userId: string
   desiredHourlyRate: number
   currencyCode: CurrencyCode
+  /**
+   * How many hours you consider "a working day".
+   * Used to convert hourly <-> daily rates and to compute day-based analytics.
+   */
+  hoursPerDay: number
   createdAt: Date
   updatedAt: Date
 }
@@ -43,6 +59,8 @@ export interface ProjectRow {
   description?: string | null
   quote_amount: number
   desired_hourly_rate: number
+  desired_day_rate?: number | null
+  hours_per_day?: number | null
   target_hours: number
   total_tracked_time: number
   status: 'active' | 'completed'
@@ -65,6 +83,7 @@ export interface UserSettingsRow {
   user_id: string
   desired_hourly_rate: number
   currency_code: CurrencyCode
+  hours_per_day?: number | null
   created_at: Date
   updated_at: Date
 }

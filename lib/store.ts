@@ -18,8 +18,25 @@ interface AppState {
   // Projects
   projects: Project[]
   fetchProjects: () => Promise<void>
-  addProject: (project: Omit<Project, 'id' | 'userId' | 'targetHours' | 'totalTrackedTime' | 'createdAt' | 'updatedAt' | 'sessions'>) => Promise<void>
-  updateProject: (id: string, updates: Partial<Project>) => Promise<void>
+  addProject: (project: Omit<Project, 'id' | 'userId' | 'targetHours' | 'totalTrackedTime' | 'createdAt' | 'updatedAt' | 'sessions' | 'desiredHourlyRate' | 'desiredDayRate' | 'hoursPerDay'> & {
+    /**
+     * Hourly-rate workflow. Required when `desiredDayRate` isn't provided.
+     */
+    desiredHourlyRate?: number
+    /**
+     * Day-rate workflow. Optional; if provided the server derives `desiredHourlyRate`.
+     */
+    desiredDayRate?: number
+    /**
+     * Custom hours per day for this project. If null/undefined, uses global setting.
+     */
+    hoursPerDay?: number | null
+    /**
+     * Project status. Defaults to 'active'.
+     */
+    status?: 'active' | 'completed'
+  }) => Promise<void>
+  updateProject: (id: string, updates: Partial<Project> & { desiredDayRate?: number | null }) => Promise<void>
   deleteProject: (id: string) => Promise<void>
 
   // Time sessions
@@ -104,7 +121,9 @@ export const useStore = create<AppState>((set, get) => ({
           client: project.client,
           description: project.description ?? '',
           quoteAmount: project.quoteAmount,
-          desiredHourlyRate: project.desiredHourlyRate,
+          ...(project.desiredHourlyRate !== undefined && { desiredHourlyRate: project.desiredHourlyRate }),
+          ...(project.desiredDayRate !== undefined && { desiredDayRate: project.desiredDayRate }),
+          ...(project.hoursPerDay !== undefined && { hoursPerDay: project.hoursPerDay }),
           status: project.status,
         }),
       })

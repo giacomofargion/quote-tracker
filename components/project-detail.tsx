@@ -58,7 +58,10 @@ export function ProjectDetail({ id }: { id: string }) {
   const [editName, setEditName] = useState('')
   const [editClient, setEditClient] = useState('')
   const [editQuote, setEditQuote] = useState('')
+  const [editRateType, setEditRateType] = useState<'hourly' | 'daily'>('hourly')
   const [editRate, setEditRate] = useState('')
+  const [editDayRate, setEditDayRate] = useState('')
+  const [editHoursPerDay, setEditHoursPerDay] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editStatus, setEditStatus] = useState<'active' | 'completed'>('active')
   const [descriptionExpanded, setDescriptionExpanded] = useState(false)
@@ -68,6 +71,8 @@ export function ProjectDetail({ id }: { id: string }) {
   const project = projects.find((p) => p.id === id)
   const currencyCode = settings?.currencyCode ?? 'gbp'
   const currencyLabel = currencyOptions.find((option) => option.value === currencyCode)?.label ?? 'GBP (£)'
+  // Use project-specific hoursPerDay if set, otherwise fall back to global setting
+  const hoursPerDay = project?.hoursPerDay ?? settings?.hoursPerDay ?? 8
   const isTimerActive = activeProjectId === id
 
   // Fetch project data if not loaded
@@ -89,7 +94,12 @@ export function ProjectDetail({ id }: { id: string }) {
       setEditName(project.name)
       setEditClient(project.client)
       setEditQuote(project.quoteAmount.toString())
+      const hasDayRate = project.desiredDayRate !== undefined
+      setEditRateType(hasDayRate ? 'daily' : 'hourly')
+      setEditDayRate(project.desiredDayRate?.toString() ?? '')
       setEditRate(project.desiredHourlyRate.toString())
+      // Initialize hoursPerDay: use project-specific if set, otherwise empty (will use global)
+      setEditHoursPerDay(project.hoursPerDay?.toString() ?? '')
       setEditDescription(project.description ?? '')
       setEditStatus(project.status)
     }
@@ -184,6 +194,9 @@ export function ProjectDetail({ id }: { id: string }) {
     ? project.quoteAmount / (project.totalTrackedTime / 60)
     : 0
 
+  const currentDayRate = earningsPerMinute * 60 * hoursPerDay
+  const baselineDayRate = project.desiredDayRate ?? (project.desiredHourlyRate * hoursPerDay)
+
   // Gauge calculations
   const gaugePercentage = Math.min((effectiveRate / (project.desiredHourlyRate * 1.5)) * 100, 100)
   const isAboveTarget = effectiveRate >= project.desiredHourlyRate
@@ -222,11 +235,22 @@ export function ProjectDetail({ id }: { id: string }) {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      const quoteAmount = parseFloat(editQuote)
       await updateProject(project.id, {
         name: editName,
         client: editClient,
-        quoteAmount: parseFloat(editQuote),
-        desiredHourlyRate: parseFloat(editRate),
+        quoteAmount,
+        ...(editRateType === 'daily'
+          ? {
+              desiredDayRate: editDayRate ? parseFloat(editDayRate) : null,
+            }
+          : {
+              desiredHourlyRate: parseFloat(editRate),
+              // See API: `desiredDayRate: 0` is treated as "clear day rate".
+              desiredDayRate: 0,
+            }),
+        // Send null/empty to use global setting, otherwise send the number
+        hoursPerDay: editHoursPerDay ? parseFloat(editHoursPerDay) : null,
         description: editDescription,
         status: editStatus,
       })
@@ -255,9 +279,23 @@ export function ProjectDetail({ id }: { id: string }) {
     }
   }
 
-  const budgetedTime = editQuote && editRate
-    ? (parseFloat(editQuote) / parseFloat(editRate)).toFixed(1)
-    : '0'
+  // Use editHoursPerDay if set, otherwise fall back to global setting
+  const effectiveEditHoursPerDay = editHoursPerDay ? parseFloat(editHoursPerDay) : (settings?.hoursPerDay ?? 8)
+
+  const budgetedTimeHours = (() => {
+    const quote = parseFloat(editQuote)
+    if (!Number.isFinite(quote) || quote <= 0) return 0
+
+    if (editRateType === 'daily') {
+      const dayRate = parseFloat(editDayRate)
+      if (!Number.isFinite(dayRate) || dayRate <= 0) return 0
+      return (quote / dayRate) * effectiveEditHoursPerDay
+    }
+
+    const hourlyRate = parseFloat(editRate)
+    if (!Number.isFinite(hourlyRate) || hourlyRate <= 0) return 0
+    return quote / hourlyRate
+  })()
 
   const sortedSessions = [...project.sessions].sort(
     (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
@@ -294,7 +332,7 @@ export function ProjectDetail({ id }: { id: string }) {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
               <Badge variant="secondary" className="shrink-0">{formatCurrency(project.quoteAmount, currencyCode)} Fixed</Badge>
               <span className="text-sm text-muted-foreground">
-                Target: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
+                Baseline: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
               </span>
             </div>
             {project.description?.trim() ? (
@@ -421,11 +459,11 @@ export function ProjectDetail({ id }: { id: string }) {
                 transition={{ duration: 0.3, delay: 0.5 }}
               >
                 <p className="text-sm text-muted-foreground">
-                  Target: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
+                  Baseline: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
                 </p>
                 {!isAboveTarget && project.totalTrackedTime > 0 && (
                   <p className="text-red-500 text-sm mt-1">
-                    {formatCurrency(rateDifference, currencyCode)} below target
+                    {formatCurrency(rateDifference, currencyCode)} below baseline
                   </p>
                 )}
               </motion.div>
@@ -577,6 +615,42 @@ export function ProjectDetail({ id }: { id: string }) {
               </CardContent>
             </Card>
             </motion.div>
+
+            {/* Current Day Rate */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.5 }}
+            >
+              <Card className="border-dashed">
+              <CardContent className="p-3 sm:p-4">
+                <span className="text-xs sm:text-sm text-muted-foreground">Current Day Rate</span>
+                <p className="text-lg sm:text-2xl font-bold font-mono mt-1">
+                  {formatCurrency(currentDayRate, currencyCode)}
+                </p>
+                <p className="text-xs text-muted-foreground">{hoursPerDay}h/day at current pace</p>
+              </CardContent>
+            </Card>
+            </motion.div>
+
+            {/* Baseline Day Rate */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.55 }}
+            >
+              <Card className="border-dashed">
+              <CardContent className="p-3 sm:p-4">
+                <span className="text-xs sm:text-sm text-muted-foreground">Baseline Day Rate</span>
+                <p className="text-lg sm:text-2xl font-bold font-mono mt-1">
+                  {formatCurrency(baselineDayRate, currencyCode)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {project.desiredDayRate ? 'Day rate set' : `Derived from ${formatCurrency(project.desiredHourlyRate, currencyCode)}/hr`}
+                </p>
+              </CardContent>
+            </Card>
+            </motion.div>
           </div>
 
           {/* Recent Sessions */}
@@ -724,7 +798,31 @@ export function ProjectDetail({ id }: { id: string }) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-rate">Target Rate ({currencyLabel}/hr)</Label>
+                <Label>Rate Type</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={editRateType === 'hourly' ? 'default' : 'outline'}
+                    className="flex-1"
+                    onClick={() => setEditRateType('hourly')}
+                  >
+                    Hourly
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editRateType === 'daily' ? 'default' : 'outline'}
+                    className="flex-1"
+                    onClick={() => setEditRateType('daily')}
+                  >
+                    Day
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {editRateType === 'hourly' ? (
+              <div className="space-y-2">
+                <Label htmlFor="edit-rate">Baseline Rate ({currencyLabel}/hr)</Label>
                 <Input
                   id="edit-rate"
                   type="number"
@@ -735,11 +833,43 @@ export function ProjectDetail({ id }: { id: string }) {
                   required
                 />
               </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="edit-day-rate">Baseline Day Rate ({currencyLabel}/day)</Label>
+                <Input
+                  id="edit-day-rate"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editDayRate}
+                  onChange={(e) => setEditDayRate(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  We’ll convert day rate using {effectiveEditHoursPerDay} hours/day.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-hours-per-day">Hours Per Day (Optional)</Label>
+              <Input
+                id="edit-hours-per-day"
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={editHoursPerDay}
+                onChange={(e) => setEditHoursPerDay(e.target.value)}
+                placeholder={settings?.hoursPerDay?.toString() ?? '8'}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to use global setting ({settings?.hoursPerDay ?? 8}h/day). Used for day-rate conversions and analytics.
+              </p>
             </div>
 
             <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
               <span className="text-muted-foreground text-sm">Budgeted Time:</span>
-              <span className="font-mono font-semibold">{budgetedTime} hours</span>
+              <span className="font-mono font-semibold">{budgetedTimeHours.toFixed(1)} hours</span>
             </div>
 
             <div className="space-y-2">

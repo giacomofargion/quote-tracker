@@ -28,30 +28,52 @@ export default function NewProjectPage() {
   const [name, setName] = useState('')
   const [client, setClient] = useState('')
   const [quoteAmount, setQuoteAmount] = useState('')
+  const [rateType, setRateType] = useState<'hourly' | 'daily'>('hourly')
   const [desiredHourlyRate, setDesiredHourlyRate] = useState('')
+  const [desiredDayRate, setDesiredDayRate] = useState('')
+  const [hoursPerDay, setHoursPerDay] = useState('')
   const [description, setDescription] = useState('')
 
   useEffect(() => {
     if (!settings) {
       fetchSettings()
     } else {
-      setDesiredHourlyRate(settings.desiredHourlyRate.toString())
+      const hourlyRate = Number(settings.desiredHourlyRate) || 0
+      const globalHoursPerDayForRate = settings.hoursPerDay ?? 8
+      const dayRate = hourlyRate * globalHoursPerDayForRate
+      setDesiredHourlyRate(hourlyRate.toString())
+      setDesiredDayRate(dayRate.toString())
     }
   }, [settings, fetchSettings])
 
   const currencyCode = settings?.currencyCode ?? 'gbp'
   const currencyLabel = currencyOptions.find((option) => option.value === currencyCode)?.label ?? 'GBP (£)'
+  const globalHoursPerDay = settings?.hoursPerDay ?? 8
+  // Use custom hoursPerDay if set, otherwise use global setting
+  const effectiveHoursPerDay = hoursPerDay ? parseFloat(hoursPerDay) : globalHoursPerDay
 
   const qa = parseFloat(quoteAmount)
-  const dr = parseFloat(desiredHourlyRate)
-  const budgetedTime =
-    dr > 0 && Number.isFinite(qa) ? (qa / dr).toFixed(1) : '0'
+  const hourly = parseFloat(desiredHourlyRate)
+  const daily = parseFloat(desiredDayRate)
+
+  const budgetedTimeHours = (() => {
+    if (!Number.isFinite(qa) || qa <= 0) return 0
+    if (rateType === 'daily') {
+      if (!Number.isFinite(daily) || daily <= 0) return 0
+      const days = qa / daily
+      return days * effectiveHoursPerDay
+    }
+    if (!Number.isFinite(hourly) || hourly <= 0) return 0
+    return qa / hourly
+  })()
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault()
     }
-    if (!name || !quoteAmount || !desiredHourlyRate) return
+    const rateValue = rateType === 'daily' ? parseFloat(desiredDayRate) : parseFloat(desiredHourlyRate)
+    const hasRate = Number.isFinite(rateValue) && rateValue > 0
+    if (!name || !quoteAmount || !hasRate) return
 
     setIsSubmitting(true)
     try {
@@ -60,7 +82,11 @@ export default function NewProjectPage() {
         client: client || 'No Client',
         description: description || '',
         quoteAmount: parseFloat(quoteAmount),
-        desiredHourlyRate: parseFloat(desiredHourlyRate),
+        ...(rateType === 'daily'
+          ? { desiredDayRate: parseFloat(desiredDayRate) }
+          : { desiredHourlyRate: parseFloat(desiredHourlyRate) }),
+        // Send null/undefined to use global setting, otherwise send the number
+        ...(hoursPerDay ? { hoursPerDay: parseFloat(hoursPerDay) } : {}),
         status: 'active',
       })
       router.push('/dashboard')
@@ -125,7 +151,31 @@ export default function NewProjectPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rate">Target Rate ({currencyLabel}/hr)</Label>
+                <Label>Rate Type</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={rateType === 'hourly' ? 'default' : 'outline'}
+                    className="flex-1"
+                    onClick={() => setRateType('hourly')}
+                  >
+                    Hourly
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={rateType === 'daily' ? 'default' : 'outline'}
+                    className="flex-1"
+                    onClick={() => setRateType('daily')}
+                  >
+                    Day
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {rateType === 'hourly' ? (
+              <div className="space-y-2">
+                <Label htmlFor="rate">Baseline Rate ({currencyLabel}/hr)</Label>
                 <Input
                   id="rate"
                   type="number"
@@ -137,11 +187,44 @@ export default function NewProjectPage() {
                   required
                 />
               </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="dayRate">Baseline Day Rate ({currencyLabel}/day)</Label>
+                <Input
+                  id="dayRate"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={desiredDayRate}
+                  onChange={(e) => setDesiredDayRate(e.target.value)}
+                  placeholder="800"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  We’ll convert day rate using {effectiveHoursPerDay} hours/day.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="hoursPerDay">Hours Per Day (Optional)</Label>
+              <Input
+                id="hoursPerDay"
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={hoursPerDay}
+                onChange={(e) => setHoursPerDay(e.target.value)}
+                placeholder={globalHoursPerDay.toString()}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to use global setting ({globalHoursPerDay}h/day). Used for day-rate conversions and analytics.
+              </p>
             </div>
 
             <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
               <span className="text-muted-foreground text-sm">Budgeted Time:</span>
-              <span className="font-mono font-semibold">{budgetedTime} hours</span>
+              <span className="font-mono font-semibold">{budgetedTimeHours.toFixed(1)} hours</span>
             </div>
 
             <div className="space-y-2">

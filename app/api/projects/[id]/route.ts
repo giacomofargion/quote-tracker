@@ -4,6 +4,18 @@ import { sql } from '@/lib/db'
 import { projectRowToProject } from '@/lib/db/utils'
 import type { ProjectRow, TimeSessionRow } from '@/lib/types'
 
+async function ensureProjectColumns() {
+  // Keep project writes resilient if the database hasn't been migrated yet.
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS description TEXT`
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS desired_day_rate DECIMAL(10, 2)`
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS hours_per_day DECIMAL(4, 1)`
+}
+
+async function ensureSettingsColumns() {
+  await sql`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS currency_code TEXT NOT NULL DEFAULT 'gbp'`
+  await sql`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS hours_per_day DECIMAL(4, 1) NOT NULL DEFAULT 8.0`
+}
+
 // GET /api/projects/[id] - Get a single project
 export async function GET(
   request: NextRequest,
@@ -16,6 +28,9 @@ export async function GET(
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    await ensureProjectColumns()
+    await ensureSettingsColumns()
 
     const [project] = await sql<ProjectRow[]>`
       SELECT * FROM projects
@@ -64,6 +79,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    await ensureProjectColumns()
+    await ensureSettingsColumns()
+
     const body = await request.json()
     const updates: Partial<{
       name: string
@@ -71,6 +89,8 @@ export async function PATCH(
       description: string
       quote_amount: number
       desired_hourly_rate: number
+      desired_day_rate: number | null
+      hours_per_day: number | null
       target_hours: number
       status: 'active' | 'completed'
     }> = {}
@@ -80,17 +100,52 @@ export async function PATCH(
     if (body.description !== undefined) updates.description = body.description
     if (body.quoteAmount !== undefined) updates.quote_amount = body.quoteAmount
     if (body.desiredHourlyRate !== undefined) updates.desired_hourly_rate = body.desiredHourlyRate
+    if (body.desiredDayRate !== undefined) {
+      // Convention: the client can send `0` to explicitly clear the day rate.
+      // We avoid sending `null` from the UI to keep types/simple JSON payloads consistent.
+      updates.desired_day_rate = Number(body.desiredDayRate) <= 0 ? null : body.desiredDayRate
+    }
+    if (body.hoursPerDay !== undefined) {
+      // Convention: the client can send `0` or `null` to use global setting.
+      updates.hours_per_day = body.hoursPerDay === null || Number(body.hoursPerDay) <= 0 ? null : Number(body.hoursPerDay)
+    }
     if (body.status !== undefined) updates.status = body.status
 
-    // Recalculate target_hours if quote or rate changed
-    if (body.quoteAmount !== undefined || body.desiredHourlyRate !== undefined) {
+    // Recalculate target_hours if quote, rates, or hoursPerDay changed.
+    // Supports both hourly- and day-rate workflows:
+    // - If desiredDayRate is present, targetHours is computed from days × hoursPerDay.
+    // - Otherwise we keep the classic quote / hourly formula.
+    if (body.quoteAmount !== undefined || body.desiredHourlyRate !== undefined || body.desiredDayRate !== undefined || body.hoursPerDay !== undefined) {
       const currentProject = await sql<ProjectRow[]>`
         SELECT * FROM projects WHERE id = ${id} AND user_id = ${userId}
       `
       if (currentProject.length > 0) {
         const quote = body.quoteAmount ?? currentProject[0].quote_amount
-        const rate = body.desiredHourlyRate ?? currentProject[0].desired_hourly_rate
-        updates.target_hours = Number(quote) / Number(rate)
+        const hasDesiredDayRateUpdate = Object.prototype.hasOwnProperty.call(body, 'desiredDayRate')
+        const rawNextDesiredDayRate = hasDesiredDayRateUpdate ? body.desiredDayRate : currentProject[0].desired_day_rate
+        const nextDesiredDayRate = rawNextDesiredDayRate != null && Number(rawNextDesiredDayRate) <= 0 ? null : rawNextDesiredDayRate
+        const nextDesiredHourlyRate = body.desiredHourlyRate ?? currentProject[0].desired_hourly_rate
+
+        const [settings] = await sql<{ hours_per_day: number }[]>`
+          SELECT hours_per_day FROM user_settings WHERE user_id = ${userId}
+        `
+        const globalHoursPerDay = Number(settings?.hours_per_day ?? 8)
+
+        // Determine which hoursPerDay to use: project-specific if set, otherwise global
+        const hasHoursPerDayUpdate = Object.prototype.hasOwnProperty.call(body, 'hoursPerDay')
+        const nextHoursPerDay = hasHoursPerDayUpdate
+          ? (body.hoursPerDay === null || Number(body.hoursPerDay) <= 0 ? null : Number(body.hoursPerDay))
+          : currentProject[0].hours_per_day
+        const effectiveHoursPerDay = nextHoursPerDay != null ? Number(nextHoursPerDay) : globalHoursPerDay
+
+        if (nextDesiredDayRate != null) {
+          const derivedHourlyRate = Number(nextDesiredDayRate) / effectiveHoursPerDay
+          // Keep desired_hourly_rate in sync so the rest of the app can keep using it.
+          updates.desired_hourly_rate = derivedHourlyRate
+          updates.target_hours = (Number(quote) / Number(nextDesiredDayRate)) * effectiveHoursPerDay
+        } else {
+          updates.target_hours = Number(quote) / Number(nextDesiredHourlyRate)
+        }
       }
     }
 
@@ -123,6 +178,14 @@ export async function PATCH(
     if (updates.desired_hourly_rate !== undefined) {
       setClauses.push(`desired_hourly_rate = $${paramIndex++}`)
       queryParams.push(updates.desired_hourly_rate)
+    }
+    if (updates.desired_day_rate !== undefined) {
+      setClauses.push(`desired_day_rate = $${paramIndex++}`)
+      queryParams.push(updates.desired_day_rate)
+    }
+    if (updates.hours_per_day !== undefined) {
+      setClauses.push(`hours_per_day = $${paramIndex++}`)
+      queryParams.push(updates.hours_per_day)
     }
     if (updates.target_hours !== undefined) {
       setClauses.push(`target_hours = $${paramIndex++}`)
