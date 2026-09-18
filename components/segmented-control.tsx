@@ -21,13 +21,14 @@ export function SegmentedControl<T extends string>({
   className,
 }: SegmentedControlProps<T>) {
   return (
-    <div className={cn('grid grid-cols-2 rounded-xl bg-muted/70 p-1', className)}>
+    <div className={cn('grid grid-flow-col auto-cols-fr rounded-xl bg-muted/70 p-1', className)}>
       {options.map((option) => {
         const isActive = option.value === value
         return (
           <button
             key={option.value}
             type="button"
+            aria-pressed={isActive}
             onClick={() => onChange(option.value)}
             className={cn(
               'rounded-lg px-3 py-2 text-sm font-medium transition-colors',

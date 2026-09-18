@@ -51,6 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/hooks/use-toast'
 
@@ -72,6 +73,7 @@ export function ProjectDetail({ id }: { id: string }) {
   const [editHoursPerDay, setEditHoursPerDay] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editStatus, setEditStatus] = useState<'active' | 'completed'>('active')
+  const [editError, setEditError] = useState<string | null>(null)
   const [descriptionExpanded, setDescriptionExpanded] = useState(false)
   const [sessionNotesOpen, setSessionNotesOpen] = useState(false)
   const [sessionNotes, setSessionNotes] = useState('')
@@ -230,15 +232,18 @@ export function ProjectDetail({ id }: { id: string }) {
 
   const handleEditSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    setEditError(null)
     const usesDayRate =
       editBillingType === 'daily' ||
       (editBillingType === 'fixed_quote' && editRateType === 'daily')
     const parsedQuote = parseFloat(editQuote)
     if (editBillingType === 'fixed_quote' && (!editQuote.trim() || !Number.isFinite(parsedQuote) || parsedQuote <= 0)) {
+      setEditError('Enter a valid quote amount.')
       return
     }
     const rateValue = usesDayRate ? parseFloat(editDayRate) : parseFloat(editRate)
     if (!Number.isFinite(rateValue) || rateValue <= 0) {
+      setEditError(usesDayRate ? 'Enter a valid day rate.' : 'Enter a valid hourly rate.')
       return
     }
     try {
@@ -258,6 +263,7 @@ export function ProjectDetail({ id }: { id: string }) {
         description: editDescription,
         status: editStatus,
       })
+      setEditError(null)
       setIsEditOpen(false)
     } catch (error) {
       console.error('Failed to update project:', error)
@@ -770,6 +776,7 @@ export function ProjectDetail({ id }: { id: string }) {
                             <Pencil className="h-3 w-3 text-muted-foreground" />
                           </button>
                           <button
+                            type="button"
                             onClick={async () => {
                               try {
                                 await deleteSession(project.id, session.id)
@@ -783,6 +790,7 @@ export function ProjectDetail({ id }: { id: string }) {
                               }
                             }}
                             className="p-1 hover:bg-muted rounded"
+                            aria-label="Delete session"
                           >
                             <X className="h-3 w-3 text-muted-foreground" />
                           </button>
@@ -816,6 +824,11 @@ export function ProjectDetail({ id }: { id: string }) {
             <DialogTitle>Edit Project</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-4">
+            {editError && (
+              <Alert variant="destructive">
+                <AlertDescription>{editError}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label htmlFor="edit-name">Project Name</Label>
               <Input
