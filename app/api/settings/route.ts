@@ -1,24 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { sql } from '@/lib/db'
+import { ensureSchema } from '@/lib/db/ensure-schema'
 import { userSettingsRowToUserSettings } from '@/lib/db/utils'
 import type { CurrencyCode, UserSettingsRow } from '@/lib/types'
-
-async function ensureCurrencyColumn() {
-  // Keep settings updates resilient if the database hasn't been migrated yet.
-  await sql`
-    ALTER TABLE user_settings
-    ADD COLUMN IF NOT EXISTS currency_code TEXT NOT NULL DEFAULT 'gbp'
-  `
-}
-
-async function ensureHoursPerDayColumn() {
-  // Keep settings updates resilient if the database hasn't been migrated yet.
-  await sql`
-    ALTER TABLE user_settings
-    ADD COLUMN IF NOT EXISTS hours_per_day DECIMAL(4, 1) NOT NULL DEFAULT 8.0
-  `
-}
 
 // GET /api/settings - Get user settings
 export async function GET() {
@@ -29,23 +14,22 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await ensureCurrencyColumn()
-    await ensureHoursPerDayColumn()
+    await ensureSchema()
 
-    let [settings] = await sql<UserSettingsRow[]>`
+    let [settings] = await sql`
       SELECT * FROM user_settings WHERE user_id = ${userId}
     `
 
     // Create default settings if they don't exist
     if (!settings) {
-      [settings] = await sql<UserSettingsRow[]>`
+      [settings] = await sql`
         INSERT INTO user_settings (user_id, desired_hourly_rate, currency_code, hours_per_day)
         VALUES (${userId}, 100.00, 'gbp', 8.0)
         RETURNING *
       `
     }
 
-    return NextResponse.json(userSettingsRowToUserSettings(settings))
+    return NextResponse.json(userSettingsRowToUserSettings(settings as UserSettingsRow))
   } catch (error) {
     console.error('Error fetching settings:', error)
     return NextResponse.json(
@@ -64,8 +48,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await ensureCurrencyColumn()
-    await ensureHoursPerDayColumn()
+    await ensureSchema()
 
     const body = await request.json()
     const { desiredHourlyRate, currencyCode, hoursPerDay } = body as {
@@ -96,7 +79,7 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const [existingSettings] = await sql<UserSettingsRow[]>`
+    const [existingSettings] = await sql`
       SELECT * FROM user_settings WHERE user_id = ${userId}
     `
 
@@ -105,7 +88,7 @@ export async function PATCH(request: NextRequest) {
     const nextHoursPerDay = hoursPerDay ?? existingSettings?.hours_per_day ?? 8.0
 
     // Upsert settings
-    const [settings] = await sql<UserSettingsRow[]>`
+    const [settings] = await sql`
       INSERT INTO user_settings (user_id, desired_hourly_rate, currency_code, hours_per_day)
       VALUES (${userId}, ${nextDesiredHourlyRate}, ${nextCurrencyCode}, ${nextHoursPerDay})
       ON CONFLICT (user_id)
@@ -117,7 +100,7 @@ export async function PATCH(request: NextRequest) {
       RETURNING *
     `
 
-    return NextResponse.json(userSettingsRowToUserSettings(settings))
+    return NextResponse.json(userSettingsRowToUserSettings(settings as UserSettingsRow))
   } catch (error) {
     console.error('Error updating settings:', error)
     return NextResponse.json(

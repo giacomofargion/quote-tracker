@@ -1,12 +1,12 @@
 'use client'
 
-import React from "react"
-
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore, calculateEffectiveRate, getRateStatus } from '@/lib/store'
+import { useStore } from '@/lib/store'
+import { billingTypeLabel, getProjectAnalytics, assertNever } from '@/lib/billing'
+import type { BillingType } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -23,10 +23,17 @@ import {
   Clock,
   Settings,
   X,
-  CheckCircle
+  CheckCircle,
+  Pencil,
+  Target,
+  Hourglass,
+  Wallet,
+  TrendingUp,
 } from 'lucide-react'
 import { cn, currencyOptions, formatCurrency } from '@/lib/utils'
 import { ManualSessionDialog } from '@/components/manual-session-dialog'
+import { StatCard } from '@/components/stat-card'
+import { SegmentedControl } from '@/components/segmented-control'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,14 +56,15 @@ import { toast } from '@/hooks/use-toast'
 
 export function ProjectDetail({ id }: { id: string }) {
   const router = useRouter()
-  const { projects, isLoading, isInitialized, fetchProjects, settings, fetchSettings, activeProjectId, timerStartTime, startTimer, stopTimer, updateProject, deleteSession, deleteProject } = useStore()
-  const [elapsedTime, setElapsedTime] = useState(0)
+  const { projects, fetchProject, loadedSessionProjectIds, settings, fetchSettings, activeProjectId, startTimer, stopTimer, updateProject, deleteSession, deleteProject } = useStore()
   const [isManualSessionOpen, setIsManualSessionOpen] = useState(false)
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
 
   // Edit form state
   const [editName, setEditName] = useState('')
   const [editClient, setEditClient] = useState('')
+  const [editBillingType, setEditBillingType] = useState<BillingType>('fixed_quote')
   const [editQuote, setEditQuote] = useState('')
   const [editRateType, setEditRateType] = useState<'hourly' | 'daily'>('hourly')
   const [editRate, setEditRate] = useState('')
@@ -67,20 +75,31 @@ export function ProjectDetail({ id }: { id: string }) {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false)
   const [sessionNotesOpen, setSessionNotesOpen] = useState(false)
   const [sessionNotes, setSessionNotes] = useState('')
+  const [detailLoadAttempted, setDetailLoadAttempted] = useState(false)
+  // Avoid hydrating the full project against the server skeleton (empty Zustand store).
+  const [hasMounted, setHasMounted] = useState(false)
 
   const project = projects.find((p) => p.id === id)
+  const editingSession = project?.sessions.find((session) => session.id === editingSessionId) ?? null
   const currencyCode = settings?.currencyCode ?? 'gbp'
   const currencyLabel = currencyOptions.find((option) => option.value === currencyCode)?.label ?? 'GBP (£)'
-  // Use project-specific hoursPerDay if set, otherwise fall back to global setting
-  const hoursPerDay = project?.hoursPerDay ?? settings?.hoursPerDay ?? 8
   const isTimerActive = activeProjectId === id
+  const hasLoadedSessions = loadedSessionProjectIds.includes(id)
 
-  // Fetch project data if not loaded
   useEffect(() => {
-    if (!project && !isLoading) {
-      fetchProjects()
+    setHasMounted(true)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setDetailLoadAttempted(false)
+    fetchProject(id).finally(() => {
+      if (!cancelled) setDetailLoadAttempted(true)
+    })
+    return () => {
+      cancelled = true
     }
-  }, [project, isLoading, fetchProjects])
+  }, [id, fetchProject])
 
   // Fetch settings if not loaded
   useEffect(() => {
@@ -93,9 +112,12 @@ export function ProjectDetail({ id }: { id: string }) {
     if (project) {
       setEditName(project.name)
       setEditClient(project.client)
-      setEditQuote(project.quoteAmount.toString())
-      const hasDayRate = project.desiredDayRate !== undefined
-      setEditRateType(hasDayRate ? 'daily' : 'hourly')
+      setEditBillingType(project.billingType)
+      setEditQuote(project.quoteAmount != null ? project.quoteAmount.toString() : '')
+      const usesDayRate =
+        project.billingType === 'daily' ||
+        (project.billingType === 'fixed_quote' && project.desiredDayRate != null)
+      setEditRateType(usesDayRate ? 'daily' : 'hourly')
       setEditDayRate(project.desiredDayRate?.toString() ?? '')
       setEditRate(project.desiredHourlyRate.toString())
       // Initialize hoursPerDay: use project-specific if set, otherwise empty (will use global)
@@ -105,25 +127,9 @@ export function ProjectDetail({ id }: { id: string }) {
     }
   }, [project])
 
-  useEffect(() => {
-    if (!isTimerActive || !timerStartTime) {
-      setElapsedTime(0)
-      return
-    }
-
-    const interval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - new Date(timerStartTime).getTime()) / 1000)
-      setElapsedTime(elapsed)
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [isTimerActive, timerStartTime])
-
-  // Show skeleton while loading OR if project not yet in store (avoids flash of "not found")
-  if (!project) {
-    // If we're not loading and project is missing, it genuinely doesn't exist
-    // But give fetchProjects a chance to run first (isInitialized check)
-    if (isInitialized && !isLoading) {
+  // Server and the first client paint both show the skeleton so hydration matches.
+  if (!hasMounted || !project) {
+    if (hasMounted && detailLoadAttempted) {
       return (
         <div className="space-y-6">
           <Link href="/dashboard" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -141,8 +147,11 @@ export function ProjectDetail({ id }: { id: string }) {
       <div className="space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3 sm:gap-4">
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors mt-1">
-              <ArrowLeft className="h-5 w-5" />
+            <Link
+              href="/dashboard"
+              className="mt-0.5 inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="min-w-0 flex-1">
               <Skeleton className="h-7 w-48 mb-2" />
@@ -158,7 +167,7 @@ export function ProjectDetail({ id }: { id: string }) {
           </div>
         </div>
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr,320px] xl:grid-cols-[1fr,340px]">
-          <Card className="border-dashed">
+          <Card className="gap-0 py-0">
             <CardContent className="p-4 sm:p-6 lg:p-8">
               <div className="flex flex-col items-center justify-center py-4 sm:py-8">
                 <Skeleton className="h-40 w-40 sm:h-56 sm:w-56 rounded-full mb-4" />
@@ -170,7 +179,7 @@ export function ProjectDetail({ id }: { id: string }) {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {[1, 2, 3, 4].map((i) => (
-                <Card key={i} className="border-dashed">
+                <Card key={i} className="gap-0 py-0">
                   <CardContent className="p-3 sm:p-4">
                     <Skeleton className="h-4 w-20 mb-2" />
                     <Skeleton className="h-8 w-16" />
@@ -184,23 +193,10 @@ export function ProjectDetail({ id }: { id: string }) {
     )
   }
 
-  const effectiveRate = calculateEffectiveRate(project)
-  // const rateStatus = getRateStatus(project)
-  const hoursWorked = project.totalTrackedTime / 3600
-  const hoursRemaining = Math.max(project.targetHours - hoursWorked, 0)
-  const isOverBudget = hoursWorked > project.targetHours
-  const rateDifference = project.desiredHourlyRate - effectiveRate
-  const earningsPerMinute = project.totalTrackedTime > 0
-    ? project.quoteAmount / (project.totalTrackedTime / 60)
-    : 0
-
-  const currentDayRate = earningsPerMinute * 60 * hoursPerDay
-  const baselineDayRate = project.desiredDayRate ?? (project.desiredHourlyRate * hoursPerDay)
-
-  // Gauge calculations
-  const gaugePercentage = Math.min((effectiveRate / (project.desiredHourlyRate * 1.5)) * 100, 100)
-  const isAboveTarget = effectiveRate >= project.desiredHourlyRate
-  const gaugeColor = isAboveTarget ? 'stroke-emerald-500' : 'stroke-red-500'
+  const hoursPerDay = project.hoursPerDay ?? settings?.hoursPerDay ?? 8
+  const analytics = getProjectAnalytics(project, hoursPerDay)
+  const hoursWorked = analytics.hoursWorked
+  const trackedHoursLabel = `${Math.floor(hoursWorked)}h ${Math.floor((project.totalTrackedTime % 3600) / 60)}m`
 
   const handleTimerToggle = () => {
     if (isTimerActive) {
@@ -232,24 +228,32 @@ export function ProjectDetail({ id }: { id: string }) {
     }
   }
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    const usesDayRate =
+      editBillingType === 'daily' ||
+      (editBillingType === 'fixed_quote' && editRateType === 'daily')
+    const parsedQuote = parseFloat(editQuote)
+    if (editBillingType === 'fixed_quote' && (!editQuote.trim() || !Number.isFinite(parsedQuote) || parsedQuote <= 0)) {
+      return
+    }
+    const rateValue = usesDayRate ? parseFloat(editDayRate) : parseFloat(editRate)
+    if (!Number.isFinite(rateValue) || rateValue <= 0) {
+      return
+    }
     try {
-      const quoteAmount = parseFloat(editQuote)
       await updateProject(project.id, {
         name: editName,
         client: editClient,
-        quoteAmount,
-        ...(editRateType === 'daily'
-          ? {
-              desiredDayRate: editDayRate ? parseFloat(editDayRate) : null,
-            }
+        billingType: editBillingType,
+        quoteAmount: editBillingType === 'fixed_quote' ? parsedQuote : null,
+        ...(usesDayRate
+          ? { desiredDayRate: rateValue }
           : {
-              desiredHourlyRate: parseFloat(editRate),
+              desiredHourlyRate: rateValue,
               // See API: `desiredDayRate: 0` is treated as "clear day rate".
               desiredDayRate: 0,
             }),
-        // Send null/empty to use global setting, otherwise send the number
         hoursPerDay: editHoursPerDay ? parseFloat(editHoursPerDay) : null,
         description: editDescription,
         status: editStatus,
@@ -282,11 +286,16 @@ export function ProjectDetail({ id }: { id: string }) {
   // Use editHoursPerDay if set, otherwise fall back to global setting
   const effectiveEditHoursPerDay = editHoursPerDay ? parseFloat(editHoursPerDay) : (settings?.hoursPerDay ?? 8)
 
+  const usesEditDayRate =
+    editBillingType === 'daily' ||
+    (editBillingType === 'fixed_quote' && editRateType === 'daily')
+
   const budgetedTimeHours = (() => {
+    if (editBillingType !== 'fixed_quote') return 0
     const quote = parseFloat(editQuote)
     if (!Number.isFinite(quote) || quote <= 0) return 0
 
-    if (editRateType === 'daily') {
+    if (usesEditDayRate) {
       const dayRate = parseFloat(editDayRate)
       if (!Number.isFinite(dayRate) || dayRate <= 0) return 0
       return (quote / dayRate) * effectiveEditHoursPerDay
@@ -316,12 +325,15 @@ export function ProjectDetail({ id }: { id: string }) {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3 sm:gap-4">
-          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors mt-1">
-            <ArrowLeft className="h-5 w-5" />
+          <Link
+            href="/dashboard"
+            className="mt-0.5 inline-flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{project.name}</h1>
+              <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">{project.name}</h1>
               {project.status === 'completed' && (
                 <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 shrink-0">
                   <CheckCircle className="mr-1 h-3 w-3" />
@@ -330,10 +342,41 @@ export function ProjectDetail({ id }: { id: string }) {
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
-              <Badge variant="secondary" className="shrink-0">{formatCurrency(project.quoteAmount, currencyCode)} Fixed</Badge>
-              <span className="text-sm text-muted-foreground">
-                Baseline: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
-              </span>
+              {(() => {
+                switch (analytics.billingType) {
+                  case 'fixed_quote':
+                    return (
+                      <>
+                        <Badge variant="secondary" className="shrink-0">
+                          {formatCurrency(project.quoteAmount ?? 0, currencyCode)} Fixed
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Baseline: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
+                        </span>
+                      </>
+                    )
+                  case 'hourly':
+                    return (
+                      <>
+                        <Badge variant="secondary" className="shrink-0">{billingTypeLabel('hourly')}</Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Rate: {formatCurrency(analytics.billedRate, currencyCode)}/hr
+                        </span>
+                      </>
+                    )
+                  case 'daily':
+                    return (
+                      <>
+                        <Badge variant="secondary" className="shrink-0">{billingTypeLabel('daily')}</Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Rate: {formatCurrency(analytics.billedDayRate, currencyCode)}/day
+                        </span>
+                      </>
+                    )
+                  default:
+                    return assertNever(analytics)
+                }
+              })()}
             </div>
             {project.description?.trim() ? (
               <div className="mt-2">
@@ -399,74 +442,121 @@ export function ProjectDetail({ id }: { id: string }) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <Card className="border-dashed">
+          <Card className="gap-0 py-0">
           <CardContent className="p-4 sm:p-6 lg:p-8">
-            {/* Circular Gauge */}
             <div className="flex flex-col items-center justify-center py-4 sm:py-8">
-              <motion.div
-                className="relative w-40 h-40 sm:w-56 sm:h-56"
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                  {/* Background circle */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="42"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    className="text-muted/20"
-                  />
-                  {/* Progress circle */}
-                  <motion.circle
-                    cx="50"
-                    cy="50"
-                    r="42"
-                    fill="none"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    className={gaugeColor}
-                    initial={{ strokeDasharray: "0 264" }}
-                    animate={{ strokeDasharray: `${gaugePercentage * 2.64} 264` }}
-                    transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <motion.span
-                    className={cn(
-                      "text-2xl sm:text-4xl font-bold",
-                      isAboveTarget ? "text-emerald-500" : "text-red-500"
-                    )}
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: 0.4 }}
+              {analytics.billingType === 'fixed_quote' ? (
+                <>
+                  <motion.div
+                    className="relative w-40 h-40 sm:w-56 sm:h-56"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
                   >
-                    {formatCurrency(effectiveRate, currencyCode)}
-                  </motion.span>
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                    Current Rate / HR
-                  </span>
-                </div>
-              </motion.div>
-
-              <motion.div
-                className="text-center mt-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.5 }}
-              >
-                <p className="text-sm text-muted-foreground">
-                  Baseline: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
-                </p>
-                {!isAboveTarget && project.totalTrackedTime > 0 && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {formatCurrency(rateDifference, currencyCode)} below baseline
-                  </p>
-                )}
-              </motion.div>
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        className="text-muted/20"
+                      />
+                      <motion.circle
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        fill="none"
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        className={analytics.isAboveTarget ? 'stroke-emerald-500' : 'stroke-red-500'}
+                        initial={{ strokeDasharray: "0 264" }}
+                        animate={{
+                          strokeDasharray: `${Math.min((analytics.effectiveRate / (project.desiredHourlyRate * 1.5)) * 100, 100) * 2.64} 264`,
+                        }}
+                        transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <motion.span
+                        className={cn(
+                          "text-2xl sm:text-4xl font-bold",
+                          analytics.isAboveTarget ? "text-emerald-500" : "text-red-500"
+                        )}
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                      >
+                        {formatCurrency(analytics.effectiveRate, currencyCode)}
+                      </motion.span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                        Current Rate / HR
+                      </span>
+                    </div>
+                  </motion.div>
+                  <motion.div
+                    className="text-center mt-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3, delay: 0.5 }}
+                  >
+                    <p className="text-sm text-muted-foreground">
+                      Baseline: {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
+                    </p>
+                    {!analytics.isAboveTarget && project.totalTrackedTime > 0 && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {formatCurrency(project.desiredHourlyRate - analytics.effectiveRate, currencyCode)} below baseline
+                      </p>
+                    )}
+                  </motion.div>
+                </>
+              ) : (
+                <>
+                  <motion.div
+                    className="relative w-40 h-40 sm:w-56 sm:h-56 flex flex-col items-center justify-center"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        className="text-muted/20"
+                      />
+                    </svg>
+                    <motion.span
+                      className="text-2xl sm:text-4xl font-bold relative"
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.5, delay: 0.4 }}
+                    >
+                      {formatCurrency(analytics.accruedEarnings, currencyCode)}
+                    </motion.span>
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider relative">
+                      Earned so far
+                    </span>
+                  </motion.div>
+                  <motion.div
+                    className="text-center mt-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3, delay: 0.5 }}
+                  >
+                    <p className="text-sm text-muted-foreground">
+                      {trackedHoursLabel} at{' '}
+                      {analytics.billingType === 'daily'
+                        ? `${formatCurrency(analytics.billedDayRate, currencyCode)}/day`
+                        : `${formatCurrency(analytics.billedRate, currencyCode)}/hr`}
+                    </p>
+                  </motion.div>
+                </>
+              )}
 
               {/* Timer Button */}
               <motion.div
@@ -476,7 +566,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 transition={{ duration: 0.3, delay: 0.6 }}
               >
                 {project.status === 'completed' ? (
-                  <div className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium rounded-lg bg-muted text-muted-foreground cursor-not-allowed">
+                  <div className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium rounded-xl bg-muted text-muted-foreground cursor-not-allowed">
                     <CheckCircle className="mr-2 h-5 w-5" />
                     Project Completed
                   </div>
@@ -485,7 +575,7 @@ export function ProjectDetail({ id }: { id: string }) {
                     onClick={handleTimerToggle}
                     className={cn(
                       "w-full inline-flex items-center justify-center gap-2 px-6 py-3",
-                      "text-sm font-medium rounded-lg",
+                      "text-sm font-medium rounded-xl",
                       "bg-primary text-primary-foreground",
                       "hover:bg-primary/90",
                       "transition-colors"
@@ -535,126 +625,68 @@ export function ProjectDetail({ id }: { id: string }) {
         >
           {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            {/* Time Tracked */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
-            >
-              <Card className="border-dashed">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Time Tracked</span>
-                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            <StatCard
+              label="Time tracked"
+              value={<span className="font-mono">{trackedHoursLabel}</span>}
+              hint="Total"
+              icon={<Clock className="size-4" />}
+            />
+
+            {analytics.billingType === 'fixed_quote' ? (
+              <>
+                <StatCard
+                  label="Target hours"
+                  value={<span className="font-mono">{analytics.targetHours.toFixed(1)}h</span>}
+                  hint={`Based on ${formatCurrency(project.desiredHourlyRate, currencyCode)}/hr`}
+                  icon={<Target className="size-4" />}
+                />
+                <StatCard
+                  label="Remaining"
+                  value={<span className="font-mono">{analytics.hoursRemaining.toFixed(0)}h</span>}
+                  hint={analytics.isOverBudget ? 'Over budget' : 'Left in budget'}
+                  tone={analytics.isOverBudget ? 'negative' : 'default'}
+                  className={analytics.isOverBudget ? 'ring-1 ring-red-500/40' : undefined}
+                  icon={<Hourglass className="size-4" />}
+                />
+                <StatCard
+                  label="Earnings/min"
+                  value={<span className="font-mono">{formatCurrency(analytics.earningsPerMinute, currencyCode)}</span>}
+                  hint="Current pace"
+                  icon={<Wallet className="size-4" />}
+                />
+              </>
+            ) : (
+              <>
+                <StatCard
+                  label={analytics.billingType === 'daily' ? 'Day rate' : 'Hourly rate'}
+                  value={
+                    <span className="font-mono">
+                      {analytics.billingType === 'daily'
+                        ? formatCurrency(analytics.billedDayRate, currencyCode)
+                        : formatCurrency(analytics.billedRate, currencyCode)}
+                    </span>
+                  }
+                  hint={analytics.billingType === 'daily' ? 'Per day' : 'Per hour'}
+                  icon={<Wallet className="size-4" />}
+                />
+                <div className="col-span-2">
+                  <StatCard
+                    label="Earned so far"
+                    value={<span className="font-mono">{formatCurrency(analytics.accruedEarnings, currencyCode)}</span>}
+                    hint={
+                      analytics.billingType === 'daily'
+                        ? `${trackedHoursLabel} × ${formatCurrency(analytics.billedDayRate, currencyCode)}/day`
+                        : `${trackedHoursLabel} × ${formatCurrency(analytics.billedRate, currencyCode)}/hr`
+                    }
+                    icon={<TrendingUp className="size-4" />}
+                  />
                 </div>
-                <p className="text-lg sm:text-2xl font-bold font-mono">
-                  {Math.floor(hoursWorked)}h {Math.floor((project.totalTrackedTime % 3600) / 60)}m
-                </p>
-                <p className="text-xs text-muted-foreground">Total</p>
-              </CardContent>
-            </Card>
-            </motion.div>
-
-            {/* Target Hours */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.35 }}
-            >
-              <Card className="border-dashed">
-              <CardContent className="p-3 sm:p-4">
-                <span className="text-xs sm:text-sm text-muted-foreground">Target Hours</span>
-                <p className="text-lg sm:text-2xl font-bold font-mono mt-1">
-                  {project.targetHours.toFixed(1)}h
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  Based on {formatCurrency(project.desiredHourlyRate, currencyCode)}/hr
-                </p>
-              </CardContent>
-            </Card>
-            </motion.div>
-
-            {/* Remaining */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.4 }}
-            >
-              <Card className={cn(
-              "border-dashed",
-              isOverBudget && "border-red-500/50"
-            )}>
-              <CardContent className="p-3 sm:p-4">
-                <span className="text-xs sm:text-sm text-muted-foreground">Remaining</span>
-                <p className={cn(
-                  "text-lg sm:text-2xl font-bold font-mono mt-1",
-                  isOverBudget ? "text-red-500" : "text-foreground"
-                )}>
-                  {hoursRemaining.toFixed(0)}h
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {isOverBudget ? 'Over budget' : 'Left in budget'}
-                </p>
-              </CardContent>
-            </Card>
-            </motion.div>
-
-            {/* Earnings/Min */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.45 }}
-            >
-              <Card className="border-dashed">
-              <CardContent className="p-3 sm:p-4">
-                <span className="text-xs sm:text-sm text-muted-foreground">Earnings/Min</span>
-                <p className="text-lg sm:text-2xl font-bold font-mono mt-1">
-                  {formatCurrency(earningsPerMinute, currencyCode)}
-                </p>
-                <p className="text-xs text-muted-foreground">Current pace</p>
-              </CardContent>
-            </Card>
-            </motion.div>
-
-            {/* Current Day Rate */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.5 }}
-            >
-              <Card className="border-dashed">
-              <CardContent className="p-3 sm:p-4">
-                <span className="text-xs sm:text-sm text-muted-foreground">Current Day Rate</span>
-                <p className="text-lg sm:text-2xl font-bold font-mono mt-1">
-                  {formatCurrency(currentDayRate, currencyCode)}
-                </p>
-                <p className="text-xs text-muted-foreground">{hoursPerDay}h/day at current pace</p>
-              </CardContent>
-            </Card>
-            </motion.div>
-
-            {/* Baseline Day Rate */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.55 }}
-            >
-              <Card className="border-dashed">
-              <CardContent className="p-3 sm:p-4">
-                <span className="text-xs sm:text-sm text-muted-foreground">Baseline Day Rate</span>
-                <p className="text-lg sm:text-2xl font-bold font-mono mt-1">
-                  {formatCurrency(baselineDayRate, currencyCode)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {project.desiredDayRate ? 'Day rate set' : `Derived from ${formatCurrency(project.desiredHourlyRate, currencyCode)}/hr`}
-                </p>
-              </CardContent>
-            </Card>
-            </motion.div>
+              </>
+            )}
           </div>
 
           {/* Recent Sessions */}
-          <Card className="border-dashed">
+          <Card className="gap-0 py-0">
             <CardHeader className="pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm sm:text-base">Recent Sessions</CardTitle>
@@ -670,7 +702,12 @@ export function ProjectDetail({ id }: { id: string }) {
               </div>
             </CardHeader>
             <CardContent className="pt-0 px-3 sm:px-6 pb-3 sm:pb-6">
-              {sortedSessions.length === 0 ? (
+              {!hasLoadedSessions ? (
+                <div className="space-y-2 py-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : sortedSessions.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   No sessions recorded yet
                 </p>
@@ -690,7 +727,7 @@ export function ProjectDetail({ id }: { id: string }) {
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 20 }}
                           transition={{ duration: 0.2, delay: index * 0.05 }}
-                          className="flex items-center gap-2 py-2 group"
+                          className="flex items-center gap-2 rounded-xl px-2 py-2 group hover:bg-white/5"
                         >
                         <div className="min-w-0 shrink-0">
                           <p className="text-xs sm:text-sm">
@@ -717,10 +754,21 @@ export function ProjectDetail({ id }: { id: string }) {
                             <span className="text-xs text-muted-foreground/50">—</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
                           <span className="text-xs sm:text-sm font-mono">
                             {formatDuration(session.duration)}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingSessionId(session.id)
+                              setIsManualSessionOpen(true)
+                            }}
+                            className="p-1 hover:bg-muted rounded"
+                            aria-label="Edit session hours"
+                          >
+                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                          </button>
                           <button
                             onClick={async () => {
                               try {
@@ -734,7 +782,7 @@ export function ProjectDetail({ id }: { id: string }) {
                                 })
                               }
                             }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-muted rounded"
+                            className="p-1 hover:bg-muted rounded"
                           >
                             <X className="h-3 w-3 text-muted-foreground" />
                           </button>
@@ -753,8 +801,12 @@ export function ProjectDetail({ id }: { id: string }) {
       {/* Manual Session Dialog */}
       <ManualSessionDialog
         open={isManualSessionOpen}
-        onOpenChange={setIsManualSessionOpen}
+        onOpenChange={(open) => {
+          setIsManualSessionOpen(open)
+          if (!open) setEditingSessionId(null)
+        }}
         projectId={project.id}
+        session={editingSession}
       />
 
       {/* Edit Project Dialog */}
@@ -784,58 +836,64 @@ export function ProjectDetail({ id }: { id: string }) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-quote">Quote Amount ({currencyLabel})</Label>
-                <Input
-                  id="edit-quote"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editQuote}
-                  onChange={(e) => setEditQuote(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Rate Type</Label>
-                <div className="flex gap-2">
-                  <Button
+            <div className="space-y-2">
+              <Label>How are you billing?</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: 'fixed_quote', label: 'Fixed quote' },
+                  { value: 'hourly', label: 'Hourly' },
+                  { value: 'daily', label: 'Day rate' },
+                ] as const).map((option) => (
+                  <button
+                    key={option.value}
                     type="button"
-                    variant={editRateType === 'hourly' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setEditRateType('hourly')}
+                    className={cn(
+                      'rounded-xl border px-2 py-2 text-xs font-medium transition-colors sm:text-sm',
+                      editBillingType === option.value
+                        ? 'border-primary/40 bg-primary/12'
+                        : 'border-border/80 bg-background/40 hover:bg-accent/60',
+                    )}
+                    onClick={() => setEditBillingType(option.value)}
                   >
-                    Hourly
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={editRateType === 'daily' ? 'default' : 'outline'}
-                    className="flex-1"
-                    onClick={() => setEditRateType('daily')}
-                  >
-                    Day
-                  </Button>
-                </div>
+                    {option.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {editRateType === 'hourly' ? (
-              <div className="space-y-2">
-                <Label htmlFor="edit-rate">Baseline Rate ({currencyLabel}/hr)</Label>
-                <Input
-                  id="edit-rate"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editRate}
-                  onChange={(e) => setEditRate(e.target.value)}
-                  required
-                />
+            {editBillingType === 'fixed_quote' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-quote">Quote Amount ({currencyLabel})</Label>
+                  <Input
+                    id="edit-quote"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editQuote}
+                    onChange={(e) => setEditQuote(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Baseline as</Label>
+                  <SegmentedControl
+                    value={editRateType}
+                    onChange={setEditRateType}
+                    options={[
+                      { value: 'hourly', label: 'Hourly' },
+                      { value: 'daily', label: 'Day' },
+                    ]}
+                  />
+                </div>
               </div>
-            ) : (
+            )}
+
+            {usesEditDayRate ? (
               <div className="space-y-2">
-                <Label htmlFor="edit-day-rate">Baseline Day Rate ({currencyLabel}/day)</Label>
+                <Label htmlFor="edit-day-rate">
+                  {editBillingType === 'fixed_quote' ? 'Baseline Day Rate' : 'Day Rate'} ({currencyLabel}/day)
+                </Label>
                 <Input
                   id="edit-day-rate"
                   type="number"
@@ -849,28 +907,47 @@ export function ProjectDetail({ id }: { id: string }) {
                   We’ll convert day rate using {effectiveEditHoursPerDay} hours/day.
                 </p>
               </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="edit-rate">
+                  {editBillingType === 'fixed_quote' ? 'Baseline Rate' : 'Hourly Rate'} ({currencyLabel}/hr)
+                </Label>
+                <Input
+                  id="edit-rate"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editRate}
+                  onChange={(e) => setEditRate(e.target.value)}
+                  required
+                />
+              </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-hours-per-day">Hours Per Day (Optional)</Label>
-              <Input
-                id="edit-hours-per-day"
-                type="number"
-                min="0.5"
-                step="0.5"
-                value={editHoursPerDay}
-                onChange={(e) => setEditHoursPerDay(e.target.value)}
-                placeholder={settings?.hoursPerDay?.toString() ?? '8'}
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave empty to use global setting ({settings?.hoursPerDay ?? 8}h/day). Used for day-rate conversions and analytics.
-              </p>
-            </div>
+            {usesEditDayRate && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-hours-per-day">Hours Per Day (Optional)</Label>
+                <Input
+                  id="edit-hours-per-day"
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={editHoursPerDay}
+                  onChange={(e) => setEditHoursPerDay(e.target.value)}
+                  placeholder={settings?.hoursPerDay?.toString() ?? '8'}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to use global setting ({settings?.hoursPerDay ?? 8}h/day).
+                </p>
+              </div>
+            )}
 
-            <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
-              <span className="text-muted-foreground text-sm">Budgeted Time:</span>
-              <span className="font-mono font-semibold">{budgetedTimeHours.toFixed(1)} hours</span>
-            </div>
+            {editBillingType === 'fixed_quote' && (
+              <div className="flex items-center justify-between rounded-2xl bg-primary/8 px-4 py-3">
+                <span className="text-muted-foreground text-sm">Budgeted time</span>
+                <span className="font-mono font-semibold">{budgetedTimeHours.toFixed(1)} hours</span>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="edit-status">Project Status</Label>

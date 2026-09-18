@@ -1,8 +1,9 @@
 'use client'
 
 import React from "react"
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '@/lib/store'
+import type { TimeSession } from '@/lib/types'
 import {
   Dialog,
   DialogContent,
@@ -18,71 +19,119 @@ interface ManualSessionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   projectId: string
+  session?: TimeSession | null
 }
 
-export function ManualSessionDialog({ open, onOpenChange, projectId }: ManualSessionDialogProps) {
-  const { addSession } = useStore()
+function durationToParts(durationSeconds: number) {
+  const total = Math.max(0, Math.floor(Number(durationSeconds) || 0))
+  return {
+    hours: String(Math.floor(total / 3600)),
+    minutes: String(Math.floor((total % 3600) / 60)),
+    seconds: String(total % 60),
+  }
+}
 
-  const [date, setDate] = useState(() => {
-    const today = new Date()
-    return today.toISOString().split('T')[0]
-  })
+function dateInputValue(date: Date) {
+  const local = new Date(date)
+  const offsetDate = new Date(local.getTime() - local.getTimezoneOffset() * 60_000)
+  return offsetDate.toISOString().split('T')[0]
+}
+
+export function ManualSessionDialog({ open, onOpenChange, projectId, session }: ManualSessionDialogProps) {
+  const { addSession, updateSession } = useStore()
+  const isEditing = Boolean(session)
+
+  const [date, setDate] = useState(() => dateInputValue(new Date()))
   const [hours, setHours] = useState('0')
   const [minutes, setMinutes] = useState('0')
+  const [seconds, setSeconds] = useState('0')
   const [notes, setNotes] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    if (session) {
+      const parts = durationToParts(session.duration)
+      setDate(dateInputValue(new Date(session.startTime)))
+      setHours(parts.hours)
+      setMinutes(parts.minutes)
+      setSeconds(parts.seconds)
+      setNotes(session.note ?? '')
+    } else {
+      setDate(dateInputValue(new Date()))
+      setHours('0')
+      setMinutes('0')
+      setSeconds('0')
+      setNotes('')
+    }
+    setFormError(null)
+  }, [open, session])
+
+  const durationSeconds =
+    ((parseInt(hours, 10) || 0) * 3600) +
+    ((parseInt(minutes, 10) || 0) * 60) +
+    (parseInt(seconds, 10) || 0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const hoursNum = parseInt(hours) || 0
-    const minutesNum = parseInt(minutes) || 0
-    const totalSeconds = (hoursNum * 3600) + (minutesNum * 60)
+    if (durationSeconds <= 0) {
+      setFormError('Enter a duration greater than zero.')
+      return
+    }
 
-    if (totalSeconds === 0) return
+    const startDateTime = new Date(`${date}T12:00:00`)
+    if (Number.isNaN(startDateTime.getTime())) {
+      setFormError('Enter a valid date.')
+      return
+    }
 
-    // Create start time from date
-    const startDateTime = new Date(date)
-    startDateTime.setHours(12, 0, 0, 0) // Default to noon
+    // Keep the original time of day when editing so we only change the date/duration.
+    if (session) {
+      const original = new Date(session.startTime)
+      startDateTime.setHours(original.getHours(), original.getMinutes(), original.getSeconds(), 0)
+    }
 
-    const endDateTime = new Date(startDateTime.getTime() + totalSeconds * 1000)
+    const endDateTime = new Date(startDateTime.getTime() + durationSeconds * 1000)
 
+    setIsSaving(true)
     try {
-      await addSession(projectId, {
-        startTime: startDateTime,
-        endTime: endDateTime,
-        duration: totalSeconds,
-        isManual: true,
-        note: notes.trim() || undefined,
-      })
+      if (session) {
+        await updateSession(projectId, session.id, {
+          startTime: startDateTime,
+          duration: durationSeconds,
+          note: notes.trim() || null,
+        })
+      } else {
+        await addSession(projectId, {
+          startTime: startDateTime,
+          endTime: endDateTime,
+          duration: durationSeconds,
+          isManual: true,
+          note: notes.trim() || undefined,
+        })
+      }
 
-      // Reset form
-      setHours('0')
-      setMinutes('0')
-      setNotes('')
       onOpenChange(false)
     } catch (error) {
-      console.error('Failed to add session:', error)
+      console.error('Failed to save session:', error)
+      setFormError('Could not save this session. Please try again.')
+    } finally {
+      setIsSaving(false)
     }
   }
 
-  const resetForm = () => {
-    const today = new Date()
-    setDate(today.toISOString().split('T')[0])
-    setHours('0')
-    setMinutes('0')
-    setNotes('')
-  }
-
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-      if (!isOpen) resetForm()
-      onOpenChange(isOpen)
-    }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>Add Manual Session</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Session' : 'Add Manual Session'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          {formError && (
+            <p className="text-sm text-destructive" role="alert">{formError}</p>
+          )}
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
             <Input
@@ -94,16 +143,19 @@ export function ManualSessionDialog({ open, onOpenChange, projectId }: ManualSes
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label htmlFor="hours">Hours</Label>
               <Input
                 id="hours"
                 type="number"
                 min="0"
-                max="23"
+                step="1"
                 value={hours}
-                onChange={(e) => setHours(e.target.value)}
+                onChange={(e) => {
+                  setHours(e.target.value)
+                  setFormError(null)
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -113,8 +165,27 @@ export function ManualSessionDialog({ open, onOpenChange, projectId }: ManualSes
                 type="number"
                 min="0"
                 max="59"
+                step="1"
                 value={minutes}
-                onChange={(e) => setMinutes(e.target.value)}
+                onChange={(e) => {
+                  setMinutes(e.target.value)
+                  setFormError(null)
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="seconds">Seconds</Label>
+              <Input
+                id="seconds"
+                type="number"
+                min="0"
+                max="59"
+                step="1"
+                value={seconds}
+                onChange={(e) => {
+                  setSeconds(e.target.value)
+                  setFormError(null)
+                }}
               />
             </div>
           </div>
@@ -133,8 +204,8 @@ export function ManualSessionDialog({ open, onOpenChange, projectId }: ManualSes
             <p className="text-xs text-muted-foreground">{notes.length}/200</p>
           </div>
 
-          <Button type="submit" className="w-full" disabled={hours === '0' && minutes === '0'}>
-            Save Session
+          <Button type="submit" className="w-full" disabled={isSaving || durationSeconds <= 0}>
+            {isEditing ? 'Update Session' : 'Save Session'}
           </Button>
         </form>
       </DialogContent>

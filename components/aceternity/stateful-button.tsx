@@ -5,7 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface StatefulButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface StatefulButtonProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart'
+> {
   children: React.ReactNode;
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void | Promise<void>;
   className?: string;
@@ -64,7 +67,7 @@ export const StatefulButton = ({
       disabled={disabled || state !== "idle"}
       className={cn(
         "relative inline-flex items-center justify-center gap-2 px-6 py-3",
-        "text-sm font-medium rounded-lg",
+        "text-sm font-medium rounded-xl",
         "bg-primary text-primary-foreground",
         "hover:bg-primary/90",
         "disabled:opacity-50 disabled:cursor-not-allowed",

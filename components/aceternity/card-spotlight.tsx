@@ -51,21 +51,21 @@ export const CardSpotlight = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(
-        "group relative rounded-xl overflow-hidden",
-        asCard && "border border-neutral-800 bg-neutral-950 p-6",
+        "group relative overflow-hidden rounded-2xl",
+        asCard && "surface-glass p-6",
         className
       )}
     >
       {/* Spotlight gradient overlay - absolute positioned on top */}
       <div
-        className="pointer-events-none absolute inset-0 z-10 rounded-xl transition-opacity duration-500"
+        className="pointer-events-none absolute inset-0 z-0 rounded-2xl transition-opacity duration-500"
         style={{
           opacity: isHovered ? 1 : 0,
           background: `radial-gradient(${radius}px circle at ${position.x}px ${position.y}px, ${color}, transparent 50%)`,
         }}
       />
       {/* Content */}
-      <div className="relative z-0">{children}</div>
+      <div className="relative z-10">{children}</div>
     </div>
   );
 };

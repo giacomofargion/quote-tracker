@@ -8,7 +8,7 @@ export function LogoMark({ size = 'md' }: { size?: 'sm' | 'md' }) {
 
   return (
     <div
-      className={`flex shrink-0 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground ${sizeClasses}`}
+      className={`flex shrink-0 items-center justify-center rounded-xl bg-primary font-bold text-primary-foreground shadow-sm ${sizeClasses}`}
       aria-hidden
     >
       QR

@@ -10,20 +10,23 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen">
-      {/* Mobile overlay */}
+    <div className="relative min-h-dvh">
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-32 right-[-8%] size-[34rem] rounded-full bg-[var(--ambient-1)] blur-3xl" />
+        <div className="absolute bottom-[-12%] left-[10%] size-[28rem] rounded-full bg-[var(--ambient-2)] blur-3xl" />
+      </div>
+
       {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-30 bg-background/80 backdrop-blur-sm lg:hidden"
+        <div
+          className="fixed inset-0 z-30 bg-background/70 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      
+
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
+
       <main className="flex-1 lg:ml-64">
-        {/* Mobile header */}
-        <div className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b bg-background px-4 lg:hidden">
+        <div className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-border/70 bg-background/70 px-4 backdrop-blur-xl lg:hidden">
           <Button
             variant="ghost"
             size="icon"
@@ -37,7 +40,7 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
             <span className="font-semibold">QuoteReality</span>
           </div>
         </div>
-        
+
         <div className="p-4 sm:p-6 lg:p-8">
           {children}
         </div>

@@ -1,3 +1,5 @@
+export type BillingType = 'fixed_quote' | 'hourly' | 'daily'
+
 export interface TimeSession {
   id: string
   projectId: string
@@ -14,7 +16,8 @@ export interface Project {
   name: string
   client: string
   description?: string
-  quoteAmount: number
+  billingType: BillingType
+  quoteAmount: number | null
   desiredHourlyRate: number
   /**
    * Some freelancers quote day rates instead of hourly.
@@ -27,7 +30,7 @@ export interface Project {
    * Used for day-rate conversions and day-rate analytics.
    */
   hoursPerDay: number | null
-  targetHours: number // auto-calculated: quoteAmount / desiredHourlyRate
+  targetHours: number | null // quoteAmount / rate for fixed quotes; null for T&M
   totalTrackedTime: number // in seconds
   status: 'active' | 'completed'
   createdAt: Date
@@ -57,11 +60,12 @@ export interface ProjectRow {
   name: string
   client: string
   description?: string | null
-  quote_amount: number
+  billing_type?: BillingType | null
+  quote_amount: number | null
   desired_hourly_rate: number
   desired_day_rate?: number | null
   hours_per_day?: number | null
-  target_hours: number
+  target_hours: number | null
   total_tracked_time: number
   status: 'active' | 'completed'
   created_at: Date

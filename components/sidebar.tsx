@@ -6,7 +6,8 @@ import { useStore, formatTime } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { LayoutDashboard, Plus, Settings, Sun, Moon, X, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useEffect, useState } from 'react'
+import { LogoMark } from '@/components/logo-mark'
+import { useEffect, useState, type ReactNode } from 'react'
 import { UserButton } from '@clerk/nextjs'
 
 interface SidebarProps {
@@ -20,7 +21,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const [isDark, setIsDark] = useState(true)
   const [elapsedTime, setElapsedTime] = useState(0)
 
-  // Get recent projects (last 5 accessed/created, active first)
   const recentProjects = [...projects]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5)
@@ -30,7 +30,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     setIsDark(isDarkMode)
   }, [])
 
-  // Update elapsed time for active timer
   useEffect(() => {
     if (!activeProjectId || !timerStartTime) {
       setElapsedTime(0)
@@ -63,16 +62,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   return (
     <aside className={cn(
-      "fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-300 lg:translate-x-0",
+      "fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-sidebar-border bg-sidebar backdrop-blur-xl transition-transform duration-300 lg:translate-x-0",
       open ? "translate-x-0" : "-translate-x-full"
     )}>
-      {/* Logo */}
-      <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-6">
+      <div className="flex h-16 items-center justify-between px-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-            QR
-          </div>
-          <span className="text-lg font-semibold text-sidebar-foreground">QuoteReality</span>
+          <LogoMark size="sm" />
+          <span className="text-lg font-semibold tracking-tight text-sidebar-foreground">QuoteReality</span>
         </div>
         <Button
           variant="ghost"
@@ -84,39 +80,27 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </Button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-        <Link
+      <nav className="flex-1 space-y-1 px-3 py-2 overflow-y-auto">
+        <NavItem
           href="/dashboard"
+          active={pathname === '/dashboard'}
           onClick={handleLinkClick}
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-            pathname === '/dashboard'
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-          )}
+          icon={LayoutDashboard}
         >
-          <LayoutDashboard className="h-4 w-4" />
           Dashboard
-        </Link>
-        <Link
+        </NavItem>
+        <NavItem
           href="/new-project"
+          active={pathname === '/new-project'}
           onClick={handleLinkClick}
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-            pathname === '/new-project'
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-          )}
+          icon={Plus}
         >
-          <Plus className="h-4 w-4" />
           New Project
-        </Link>
+        </NavItem>
 
-        {/* Recent Projects */}
         {recentProjects.length > 0 && (
           <div className="pt-6">
-            <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Recent Projects
             </p>
             <div className="mt-2 space-y-1">
@@ -126,13 +110,19 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   href={`/project/${project.id}`}
                   onClick={handleLinkClick}
                   className={cn(
-                    'block truncate rounded-lg px-3 py-2 text-sm transition-colors',
+                    'flex items-center gap-2.5 truncate rounded-xl px-3 py-2 text-sm transition-colors',
                     pathname === `/project/${project.id}`
                       ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                   )}
                 >
-                  {project.name}
+                  <span
+                    className={cn(
+                      'size-1.5 shrink-0 rounded-full',
+                      project.status === 'completed' ? 'bg-emerald-400' : 'bg-primary/80'
+                    )}
+                  />
+                  <span className="truncate">{project.name}</span>
                 </Link>
               ))}
             </div>
@@ -140,15 +130,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         )}
       </nav>
 
-      {/* Active Timer Indicator */}
       {activeProject && (
-        <div className="border-t border-sidebar-border p-3">
+        <div className="px-3 pb-3">
           <Link
             href={`/project/${activeProject.id}`}
             onClick={handleLinkClick}
-            className="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2 text-sm transition-colors hover:bg-primary/20"
+            className="surface-glass flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors hover:bg-primary/10"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
               <Clock className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0">
@@ -158,7 +147,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 shrink-0"
+              className="h-7 w-7 shrink-0"
               onClick={(e) => {
                 e.preventDefault()
                 stopTimer()
@@ -170,33 +159,57 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </div>
       )}
 
-      {/* Bottom Actions — extra bottom padding on mobile so Settings + Clerk avatar sit above the browser UI bar */}
       <div className="border-t border-sidebar-border p-3 pb-24 space-y-1 lg:pb-3">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="w-full justify-start gap-3 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           onClick={toggleTheme}
         >
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           {isDark ? 'Light Mode' : 'Dark Mode'}
         </Button>
-        <Link
+        <NavItem
           href="/settings"
+          active={pathname === '/settings'}
           onClick={handleLinkClick}
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-            pathname === '/settings'
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-          )}
+          icon={Settings}
         >
-          <Settings className="h-4 w-4" />
           Settings
-        </Link>
-        <div className="pt-2 border-t border-sidebar-border">
+        </NavItem>
+        <div className="pt-2 px-1">
           <UserButton afterSignOutUrl="/" />
         </div>
       </div>
     </aside>
+  )
+}
+
+function NavItem({
+  href,
+  active,
+  onClick,
+  icon: Icon,
+  children,
+}: {
+  href: string
+  active: boolean
+  onClick: () => void
+  icon: typeof LayoutDashboard
+  children: ReactNode
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+        active
+          ? 'bg-primary/15 text-foreground'
+          : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+      )}
+    >
+      <Icon className={cn('h-4 w-4', active && 'text-primary')} />
+      {children}
+    </Link>
   )
 }

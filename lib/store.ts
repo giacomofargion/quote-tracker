@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import type { Project, TimeSession, UserSettings, SortField, SortDirection, StatusFilter } from './types'
+import type { BillingType, Project, TimeSession, UserSettings, SortField, SortDirection, StatusFilter } from './types'
 
 interface AppState {
   // Loading and error states
@@ -17,23 +17,22 @@ interface AppState {
 
   // Projects
   projects: Project[]
+  /**
+   * Project ids whose sessions have been fetched.
+   * Dashboard list skips sessions, so this distinguishes "none yet" from "not loaded".
+   */
+  loadedSessionProjectIds: string[]
   fetchProjects: () => Promise<void>
-  addProject: (project: Omit<Project, 'id' | 'userId' | 'targetHours' | 'totalTrackedTime' | 'createdAt' | 'updatedAt' | 'sessions' | 'desiredHourlyRate' | 'desiredDayRate' | 'hoursPerDay'> & {
-    /**
-     * Hourly-rate workflow. Required when `desiredDayRate` isn't provided.
-     */
+  fetchProject: (id: string) => Promise<void>
+  addProject: (project: {
+    name: string
+    client: string
+    description?: string
+    billingType: BillingType
+    quoteAmount?: number | null
     desiredHourlyRate?: number
-    /**
-     * Day-rate workflow. Optional; if provided the server derives `desiredHourlyRate`.
-     */
     desiredDayRate?: number
-    /**
-     * Custom hours per day for this project. If null/undefined, uses global setting.
-     */
     hoursPerDay?: number | null
-    /**
-     * Project status. Defaults to 'active'.
-     */
     status?: 'active' | 'completed'
   }) => Promise<void>
   updateProject: (id: string, updates: Partial<Project> & { desiredDayRate?: number | null }) => Promise<void>
@@ -41,6 +40,11 @@ interface AppState {
 
   // Time sessions
   addSession: (projectId: string, session: Omit<TimeSession, 'id' | 'projectId'>) => Promise<void>
+  updateSession: (
+    projectId: string,
+    sessionId: string,
+    updates: { duration: number; startTime?: Date; note?: string | null }
+  ) => Promise<void>
   deleteSession: (projectId: string, sessionId: string) => Promise<void>
 
   // Active timer (client-side only, persists across navigation)
@@ -99,15 +103,48 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Projects
   projects: [],
+  loadedSessionProjectIds: [],
   fetchProjects: async () => {
     try {
       set({ isLoading: true, error: null })
       const response = await fetch('/api/projects')
       if (!response.ok) throw new Error('Failed to fetch projects')
-      const projects = await response.json()
-      set({ projects, isLoading: false, isInitialized: true })
+      const projects = await response.json() as Project[]
+      set((state) => {
+        const sessionsByProjectId = new Map(state.projects.map((project) => [project.id, project.sessions]))
+        return {
+          projects: projects.map((project) => ({
+            ...project,
+            sessions: sessionsByProjectId.get(project.id) ?? project.sessions ?? [],
+          })),
+          isLoading: false,
+          isInitialized: true,
+        }
+      })
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to fetch projects', isLoading: false, isInitialized: true })
+    }
+  },
+  fetchProject: async (id) => {
+    try {
+      const response = await fetch(`/api/projects/${id}`)
+      if (response.status === 404) {
+        set({ error: 'Project not found' })
+        return
+      }
+      if (!response.ok) throw new Error('Failed to fetch project')
+      const project = await response.json() as Project
+      set((state) => ({
+        projects: state.projects.some((existing) => existing.id === id)
+          ? state.projects.map((existing) => (existing.id === id ? project : existing))
+          : [project, ...state.projects],
+        loadedSessionProjectIds: state.loadedSessionProjectIds.includes(id)
+          ? state.loadedSessionProjectIds
+          : [...state.loadedSessionProjectIds, id],
+        error: null,
+      }))
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Failed to fetch project' })
     }
   },
   addProject: async (project) => {
@@ -120,7 +157,8 @@ export const useStore = create<AppState>((set, get) => ({
           name: project.name,
           client: project.client,
           description: project.description ?? '',
-          quoteAmount: project.quoteAmount,
+          billingType: project.billingType,
+          quoteAmount: project.quoteAmount ?? null,
           ...(project.desiredHourlyRate !== undefined && { desiredHourlyRate: project.desiredHourlyRate }),
           ...(project.desiredDayRate !== undefined && { desiredDayRate: project.desiredDayRate }),
           ...(project.hoursPerDay !== undefined && { hoursPerDay: project.hoursPerDay }),
@@ -135,6 +173,9 @@ export const useStore = create<AppState>((set, get) => ({
       const newProject = await response.json()
       set((state) => ({
         projects: [newProject, ...state.projects],
+        loadedSessionProjectIds: state.loadedSessionProjectIds.includes(newProject.id)
+          ? state.loadedSessionProjectIds
+          : [...state.loadedSessionProjectIds, newProject.id],
         isLoading: false,
       }))
     } catch (error) {
@@ -157,6 +198,9 @@ export const useStore = create<AppState>((set, get) => ({
       const updatedProject = await response.json()
       set((state) => ({
         projects: state.projects.map((p) => (p.id === id ? updatedProject : p)),
+        loadedSessionProjectIds: state.loadedSessionProjectIds.includes(id)
+          ? state.loadedSessionProjectIds
+          : [...state.loadedSessionProjectIds, id],
         isLoading: false,
       }))
     } catch (error) {
@@ -173,6 +217,7 @@ export const useStore = create<AppState>((set, get) => ({
       if (!response.ok) throw new Error('Failed to delete project')
       set((state) => ({
         projects: state.projects.filter((p) => p.id !== id),
+        loadedSessionProjectIds: state.loadedSessionProjectIds.filter((projectId) => projectId !== id),
         isLoading: false,
         // Clear timer if deleting active project
         activeProjectId: state.activeProjectId === id ? null : state.activeProjectId,
@@ -213,12 +258,52 @@ export const useStore = create<AppState>((set, get) => ({
             totalTrackedTime: p.totalTrackedTime + session.duration,
           }
         }),
+        loadedSessionProjectIds: state.loadedSessionProjectIds.includes(projectId)
+          ? state.loadedSessionProjectIds
+          : [...state.loadedSessionProjectIds, projectId],
         isLoading: false,
       }))
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to create session', isLoading: false })
-      // Refetch projects to sync state
-      await get().fetchProjects()
+      await get().fetchProject(projectId)
+      throw error
+    }
+  },
+  updateSession: async (projectId, sessionId, updates) => {
+    try {
+      set({ isLoading: true, error: null })
+      const response = await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          duration: updates.duration,
+          startTime: updates.startTime?.toISOString(),
+          note: updates.note,
+        }),
+      })
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || 'Failed to update session')
+      }
+      const { session: updatedSession, totalTrackedTime } = await response.json() as {
+        session: TimeSession
+        totalTrackedTime: number
+      }
+
+      set((state) => ({
+        projects: state.projects.map((p) => {
+          if (p.id !== projectId) return p
+          return {
+            ...p,
+            sessions: p.sessions.map((s) => (s.id === sessionId ? updatedSession : s)),
+            totalTrackedTime,
+          }
+        }),
+        isLoading: false,
+      }))
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Failed to update session', isLoading: false })
+      await get().fetchProject(projectId)
       throw error
     }
   },
@@ -248,8 +333,7 @@ export const useStore = create<AppState>((set, get) => ({
       })
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to delete session', isLoading: false })
-      // Refetch projects to sync state
-      await get().fetchProjects()
+      await get().fetchProject(projectId)
       throw error
     }
   },
@@ -301,23 +385,6 @@ export const useStore = create<AppState>((set, get) => ({
   sortDirection: 'desc',
   setSortDirection: (direction) => set({ sortDirection: direction }),
 }))
-
-// Helper to calculate effective hourly rate
-export function calculateEffectiveRate(project: Project): number {
-  if (project.totalTrackedTime === 0) return project.desiredHourlyRate
-  const hoursWorked = project.totalTrackedTime / 3600
-  return project.quoteAmount / hoursWorked
-}
-
-// Helper to get rate status
-export function getRateStatus(project: Project): 'above' | 'at' | 'below' | 'critical' {
-  const effectiveRate = calculateEffectiveRate(project)
-  const ratio = effectiveRate / project.desiredHourlyRate
-  if (ratio >= 1.1) return 'above'
-  if (ratio >= 0.9) return 'at'
-  if (ratio >= 0.7) return 'below'
-  return 'critical'
-}
 
 // Helper to format time
 export function formatTime(seconds: number): string {

@@ -1,3 +1,4 @@
+import { parseBillingType } from '@/lib/billing'
 import type { ProjectRow, TimeSessionRow, UserSettingsRow, Project, TimeSession, UserSettings } from '@/lib/types'
 
 /**
@@ -10,11 +11,12 @@ export function projectRowToProject(row: ProjectRow, sessions: TimeSession[] = [
     name: row.name,
     client: row.client,
     ...(row.description != null && { description: row.description }),
-    quoteAmount: Number(row.quote_amount),
+    billingType: parseBillingType(row.billing_type),
+    quoteAmount: row.quote_amount == null ? null : Number(row.quote_amount),
     desiredHourlyRate: Number(row.desired_hourly_rate),
     desiredDayRate: row.desired_day_rate == null ? null : Number(row.desired_day_rate),
     hoursPerDay: row.hours_per_day == null ? null : Number(row.hours_per_day),
-    targetHours: Number(row.target_hours),
+    targetHours: row.target_hours == null ? null : Number(row.target_hours),
     totalTrackedTime: row.total_tracked_time,
     status: row.status,
     createdAt: row.created_at,
