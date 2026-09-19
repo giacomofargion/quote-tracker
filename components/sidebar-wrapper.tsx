@@ -9,7 +9,7 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="relative min-h-dvh">
+    <div className="relative min-h-dvh overflow-x-clip">
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-32 right-[-8%] size-[34rem] rounded-full bg-[var(--ambient-1)] blur-3xl" />
         <div className="absolute bottom-[-12%] left-[10%] size-[28rem] rounded-full bg-[var(--ambient-2)] blur-3xl" />
@@ -22,9 +22,12 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* Clip the off-canvas sidebar so a 256px drawer cannot widen the page on mobile */}
+      <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden lg:contents">
+        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      </div>
 
-      <main className="flex-1 lg:ml-64">
+      <main className="min-w-0 lg:ml-64">
         <div className="sticky top-0 z-20 flex h-14 items-center border-b border-border/70 bg-background/70 px-3 backdrop-blur-xl lg:hidden">
           <Button
             variant="ghost"
@@ -37,7 +40,7 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
 
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="min-w-0 overflow-x-clip p-4 sm:p-6 lg:p-8">
           {children}
         </div>
       </main>
