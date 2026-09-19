@@ -6,7 +6,6 @@ import { useStore, formatTime } from '@/lib/store'
 import { cn } from '@/lib/utils'
 import { LayoutDashboard, Plus, Settings, Sun, Moon, X, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { LogoMark } from '@/components/logo-mark'
 import { useEffect, useState, type ReactNode } from 'react'
 import { UserButton } from '@clerk/nextjs'
 
@@ -67,7 +66,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     )}>
       <div className="flex h-16 items-center justify-between px-5">
         <div className="flex items-center gap-3">
-          <LogoMark size="sm" />
           <span className="text-lg font-semibold tracking-tight text-sidebar-foreground">QuoteReality</span>
         </div>
         <Button

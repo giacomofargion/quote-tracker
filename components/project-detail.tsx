@@ -760,7 +760,7 @@ export function ProjectDetail({ id }: { id: string }) {
                             <span className="text-xs text-muted-foreground/50">—</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs sm:text-sm font-mono">
                             {formatDuration(session.duration)}
                           </span>
@@ -770,10 +770,10 @@ export function ProjectDetail({ id }: { id: string }) {
                               setEditingSessionId(session.id)
                               setIsManualSessionOpen(true)
                             }}
-                            className="p-1 hover:bg-muted rounded"
+                            className="inline-flex size-11 items-center justify-center rounded-lg hover:bg-muted sm:size-8"
                             aria-label="Edit session hours"
                           >
-                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                            <Pencil className="size-4 text-muted-foreground" />
                           </button>
                           <button
                             type="button"
@@ -789,10 +789,10 @@ export function ProjectDetail({ id }: { id: string }) {
                                 })
                               }
                             }}
-                            className="p-1 hover:bg-muted rounded"
+                            className="inline-flex size-11 items-center justify-center rounded-lg hover:bg-muted sm:size-8"
                             aria-label="Delete session"
                           >
-                            <X className="h-3 w-3 text-muted-foreground" />
+                            <X className="size-4 text-muted-foreground" />
                           </button>
                         </div>
                       </motion.div>
