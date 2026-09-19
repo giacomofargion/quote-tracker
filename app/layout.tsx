@@ -5,11 +5,21 @@ import { ClerkProvider } from '@clerk/nextjs'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-import { Geist_Mono, Exo_2 as V0_Font_Exo_2, Geist_Mono as V0_Font_Geist_Mono } from 'next/font/google'
+import { Exo_2, Geist_Mono } from 'next/font/google'
 
-// Initialize fonts
-const _exo_2 = V0_Font_Exo_2({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"] })
-const _geistMono = V0_Font_Geist_Mono({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"] })
+const exo2 = Exo_2({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-exo-2',
+  display: 'swap',
+})
+
+const geistMono = Geist_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-geist-mono',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'QuoteReality - Freelance Time & Earnings Tracker',
@@ -46,7 +56,7 @@ export default function RootLayout({
       signInFallbackRedirectUrl="/dashboard"
       signUpFallbackRedirectUrl="/dashboard"
     >
-      <html lang="en" className="dark">
+      <html lang="en" className={`dark scroll-smooth ${exo2.variable} ${geistMono.variable}`}>
         <body className="font-sans antialiased">
           {children}
           <Analytics />

@@ -3,7 +3,6 @@
 import React, { useState } from 'react'
 import { Sidebar } from './sidebar'
 import { Button } from '@/components/ui/button'
-import { LogoMark } from '@/components/logo-mark'
 import { Menu } from 'lucide-react'
 
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
@@ -26,19 +25,16 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main className="flex-1 lg:ml-64">
-        <div className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-border/70 bg-background/70 px-4 backdrop-blur-xl lg:hidden">
+        <div className="sticky top-0 z-20 flex h-14 items-center border-b border-border/70 bg-background/70 px-3 backdrop-blur-xl lg:hidden">
           <Button
             variant="ghost"
             size="icon"
+            className="size-11"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="size-6" />
             <span className="sr-only">Open menu</span>
           </Button>
-          <div className="flex items-center gap-2">
-            <LogoMark size="sm" />
-            <span className="font-semibold">QuoteReality</span>
-          </div>
         </div>
 
         <div className="p-4 sm:p-6 lg:p-8">
