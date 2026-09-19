@@ -61,7 +61,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   return (
     <aside className={cn(
-      "fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-sidebar-border bg-sidebar backdrop-blur-xl transition-transform duration-300 lg:translate-x-0",
+      "pointer-events-auto fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col border-r border-sidebar-border bg-sidebar backdrop-blur-xl transition-transform duration-300 lg:translate-x-0",
       open ? "translate-x-0" : "-translate-x-full"
     )}>
       <div className="flex h-16 items-center justify-between px-5">

@@ -127,7 +127,7 @@ export default function DashboardPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -146,7 +146,7 @@ export default function DashboardPage() {
           </PageHeader>
         </motion.div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label="Active"
             value={isInitialized ? overview.activeCount : '—'}
@@ -173,8 +173,8 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="surface-glass flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center sm:p-4">
-          <div className="relative flex-1">
+        <div className="surface-glass flex min-w-0 flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center sm:p-4">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search projects or clients..."
@@ -183,7 +183,7 @@ export default function DashboardPage() {
               className="border-transparent bg-background/50 pl-9"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:shrink-0">
             <Select
               value={`${sortField}-${sortDirection}`}
               onValueChange={(v) => {
@@ -192,7 +192,7 @@ export default function DashboardPage() {
                 setSortDirection(direction)
               }}
             >
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="min-w-0 w-full overflow-hidden sm:w-40">
                 <SelectValue>{getSortLabel()}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-              <SelectTrigger className="w-full sm:w-[130px]">
+              <SelectTrigger className="min-w-0 w-full overflow-hidden sm:w-[130px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -222,13 +222,14 @@ export default function DashboardPage() {
             <span className="text-muted-foreground text-sm">{filteredAndSortedProjects.length} shown</span>
           </div>
           {!isInitialized ? (
-            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
               {[1, 2, 3].map((i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.1 }}
+                  className="min-w-0"
                 >
                   <Card className="gap-0 py-0">
                     <CardContent className="p-5">
@@ -265,7 +266,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
               {filteredAndSortedProjects.map((project, index) => {
                 const hoursPerDay = project.hoursPerDay ?? settings?.hoursPerDay ?? 8
                 const analytics = getProjectAnalytics(project, hoursPerDay)
@@ -280,6 +281,7 @@ export default function DashboardPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay }}
+                    className="min-w-0"
                   >
                     <Link href={`/project/${project.id}`}>
                       <CardSpotlight
